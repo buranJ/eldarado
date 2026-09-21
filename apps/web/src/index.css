@@ -1,0 +1,178 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Surfaces — near-black, layered */
+  --color-canvas: #08080a;
+  --color-panel: #0e0e12;
+  --color-panel-2: #131318;
+  --color-panel-3: #191920;
+  --color-panel-4: #202028;
+
+  /* Lines */
+  --color-line: #1e1e25;
+  --color-line-2: #2a2a33;
+  --color-line-3: #3a3a46;
+
+  /* Text */
+  --color-ink: #e7e7ec;
+  --color-ink-2: #9a9aa6;
+  --color-ink-3: #6a6a77;
+  --color-ink-4: #4b4b56;
+
+  /* Semantic */
+  --color-accent: #6e8bff;
+  --color-accent-soft: #1b2244;
+  --color-pos: #3fb950;
+  --color-neg: #f0666a;
+  --color-warn: #e0a83a;
+  --color-info: #58a6ff;
+  --color-violet: #a371f7;
+
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 10px 30px -12px rgb(0 0 0 / 0.8), 0 0 0 1px #2a2a33;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Desktop-only tool: 1280px minimum working width */
+  #root {
+    min-width: 1280px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 32%, transparent);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-accent) 70%, transparent);
+    outline-offset: 1px;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #26262e;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #35353f;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* Data table row background is a variable so sticky cells can inherit hover state */
+  .dt-row {
+    --row-bg: var(--color-panel);
+  }
+  .dt-row:hover {
+    --row-bg: var(--color-panel-2);
+  }
+  .dt-row[data-selected='true'] {
+    --row-bg: var(--color-panel-3);
+  }
+  .dt-cell-sticky {
+    position: sticky;
+    background-color: var(--row-bg);
+  }
+  .dt-head-sticky {
+    position: sticky;
+    background-color: var(--color-panel-2);
+  }
+  .dt-edge {
+    box-shadow: 1px 0 0 0 var(--color-line);
+  }
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes gs-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes gs-slide-in-right {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes gs-pop-in {
+  from {
+    transform: translateY(6px) scale(0.985);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes gs-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.anim-fade {
+  animation: gs-fade-in 0.14s ease-out;
+}
+.anim-slide-right {
+  animation: gs-slide-in-right 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.anim-pop {
+  animation: gs-pop-in 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.skeleton {
+  background: linear-gradient(90deg, #16161c 25%, #1e1e26 50%, #16161c 75%);
+  background-size: 200% 100%;
+  animation: gs-shimmer 1.4s linear infinite;
+}

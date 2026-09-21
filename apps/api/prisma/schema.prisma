@@ -1,0 +1,229 @@
+// GameStock — observations collected from source marketplaces.
+// Config (games, marketplaces, thresholds) lives in code, not here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Seller {
+  id               String   @id @default(cuid())
+  marketplace      String
+  externalId       String
+  name             String
+  /// 1..5 stars as shown on the source; null when the seller has no reviews yet
+  rating           Int?
+  reviewsCount     Int      @default(0)
+  accountAgeLabel  String?
+  accountAgeMonths Int?
+  isOnline         Boolean  @default(false)
+  profileUrl       String?
+  firstSeenAt      DateTime @default(now())
+  lastSeenAt       DateTime @default(now())
+
+  listings Listing[]
+
+  @@unique([marketplace, externalId])
+  @@index([marketplace, rating])
+}
+
+/// A listing observed on a source marketplace. One row per (marketplace, externalId).
+model Listing {
+  id          String @id @default(cuid())
+  marketplace String
+  externalId  String
+  gameId      String
+  url         String
+
+  /// Full text as rendered by the source, including its auto-generated suffix.
+  rawTitle    String
+  /// Seller's own title with the source's auto-suffix stripped — this is what AI reads.
+  sellerTitle String
+
+  /// Price in minor units (kopecks/cents) to avoid float drift.
+  priceMinor    Int
+  priceCurrency String
+
+  autoDelivery Boolean @default(false)
+
+  /// Game-specific attributes parsed from the source's own filter attributes.
+  gameData Json
+
+  /// Promoted out of `gameData` because the UI sorts and filters on them.
+  trophies       Int?
+  arena          Int?
+  unlockedCards  Int?
+  legendaryCards Int?
+  accountLevel   Int?
+
+  /// Hash over the fields that matter; unchanged hash means no re-analysis needed.
+  contentHash String
+
+  status           String  @default("new")
+  prefilterReasons Json?
+
+  firstSeenAt   DateTime  @default(now())
+  lastSeenAt    DateTime  @default(now())
+  disappearedAt DateTime?
+
+  seller   Seller @relation(fields: [sellerId], references: [id])
+  sellerId String
+
+  analysis  Analysis?
+  inventory InventoryItem?
+
+  @@unique([marketplace, externalId])
+  @@index([gameId, status])
+  @@index([gameId, lastSeenAt])
+  @@index([gameId, trophies])
+  @@index([gameId, priceMinor])
+  @@index([disappearedAt])
+}
+
+model CollectionRun {
+  id          String    @id @default(cuid())
+  marketplace String
+  gameId      String
+  status      String    @default("running")
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  durationMs  Int?
+  seen        Int       @default(0)
+  created     Int       @default(0)
+  updated     Int       @default(0)
+  unchanged   Int       @default(0)
+  passed      Int       @default(0)
+  rejected    Int       @default(0)
+  disappeared Int       @default(0)
+  error       String?
+
+  @@index([gameId, startedAt])
+}
+
+/// Result of one analysis pass over a listing. Facts come from the model,
+/// every score is computed deterministically from those facts.
+model Analysis {
+  id        String  @id @default(cuid())
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String  @unique
+
+  /// Hash of the listing content this analysis was produced from.
+  sourceHash    String
+  modelVersion  String
+  rubricVersion String
+
+  /// Attributes the model read out of the seller's own text.
+  extracted Json
+
+  qualityScore Int
+  dealScore    Int
+  riskScore    Int
+  /// Model's own confidence in the extraction, 0-100.
+  confidence   Int
+  /// Share of scoring inputs that are actually known, 0-100.
+  dataQuality  Int
+
+  /// Corpus-derived fair price for comparable accounts, in minor units.
+  fairPriceMinor Int?
+  /// Recommended resale price, in minor units.
+  resalePriceMinor Int?
+
+  summary   String
+  strengths Json
+  risks     Json
+  /// Per-factor breakdown behind the quality score.
+  factors   Json
+
+  inputTokens  Int @default(0)
+  outputTokens Int @default(0)
+  cachedTokens Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([dealScore])
+  @@index([qualityScore])
+}
+
+/// A purchased account. Created when an operator confirms a purchase and owns
+/// everything that happens to the account afterwards.
+model InventoryItem {
+  id        String  @id @default(cuid())
+  listing   Listing @relation(fields: [listingId], references: [id])
+  listingId String  @unique
+  gameId    String
+  title     String
+
+  /// What we actually paid, in minor units of the source currency.
+  purchaseMinor    Int
+  purchaseCurrency String
+  purchaseMarket   String
+  purchasedAt      DateTime @default(now())
+  orderRef         String?
+  operator         String   @default("оператор")
+
+  /// Destination marketplace and its pricing, in minor units.
+  resaleMarket     String
+  recommendedMinor Int
+  /// Operator override. Null means the recommended price is used as-is.
+  manualMinor      Int?
+
+  status    String   @default("purchased")
+  notes     String?
+  updatedAt DateTime @updatedAt
+
+  listings MarketplaceListing[]
+
+  @@index([gameId, status])
+  @@index([purchasedAt])
+}
+
+/// Append-only log of what happened, for the activity feed and for audit.
+model ActivityEvent {
+  id        String   @id @default(cuid())
+  gameId    String
+  kind      String
+  /// Entity the event refers to: listing external id, order ref, and so on.
+  subject   String
+  title     String
+  meta      String?
+  actor     String   @default("оператор")
+  listingId String?
+  createdAt DateTime @default(now())
+
+  @@index([gameId, createdAt])
+}
+
+/// A listing prepared for a destination marketplace. Created in draft form by
+/// the manual export adapter; an API adapter fills `externalId` on publish.
+model MarketplaceListing {
+  id          String        @id @default(cuid())
+  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId      String
+  gameId      String
+  marketplace String
+
+  /// Assigned by the destination marketplace once the offer actually exists.
+  externalId String?
+
+  title       String
+  description String
+
+  sellMinor       Int
+  purchaseMinor   Int
+  purchaseCurrency String @default("RUB")
+  currency        String
+
+  status      String    @default("draft")
+  publishedAt DateTime?
+  error       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([gameId, status])
+  @@index([itemId])
+}
