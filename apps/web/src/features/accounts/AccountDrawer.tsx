@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { MarketplaceBadge } from '@/components/MarketplaceBadge';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { getMarketplace } from '@/config/marketplaces';
+import { getGame } from '@/config/games';
 import { formatDateTime, formatRelative } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
 import {
@@ -26,6 +27,22 @@ import type { GameAccount } from '@gamestock/domain';
 
 const nd = (value: number | null, formatter = formatNumber): string =>
   value === null ? NO_DATA : formatter(value);
+
+const ATTRIBUTE_LABELS: Record<string, string> = {
+  accountLevel: 'Уровень аккаунта',
+  researchLevel: 'Уровень исследования',
+  rank: 'Ранг',
+  offerType: 'Тип предложения',
+  mythicSkins: 'Мифические скины',
+  upgradableWeapons: 'Прокачиваемое оружие',
+  killFeedMessages: 'Kill-feed сообщения',
+  sportsCars: 'Спортивные автомобили',
+  vinyls: 'Винилы',
+  cars: 'Автомобили',
+  coins: 'Монеты',
+  playtimeHours: 'Часы игры',
+  gold: 'Gold',
+};
 
 export function AccountDrawer({
   account,
@@ -46,8 +63,12 @@ export function AccountDrawer({
   if (!account) return null;
 
   const { source, gameData, transfer, analysis } = account;
+  const game = getGame(account.gameId);
   const sourceMarketplace = getMarketplace(source.marketplace);
   const purchased = account.status === 'purchased';
+  const sourceAttributes = Object.entries(gameData.sourceAttributes).filter(
+    ([key, value]) => key !== 'titleEn' && value !== null && value !== '',
+  );
 
   return (
     <Drawer
@@ -156,7 +177,7 @@ export function AccountDrawer({
         ) : null}
         <FieldGroup title="Основное">
           <div>
-            <DataField label="Игра" value="Clash Royale" />
+            <DataField label="Игра" value={game.name} />
             <DataField label="Источник" value={<MarketplaceBadge id={source.marketplace} />} />
             <DataField label="ID объявления" value={source.listingId} mono />
             <DataField label="Цена покупки" value={formatMoney(source.price)} mono />
@@ -204,70 +225,97 @@ export function AccountDrawer({
           </div>
         </FieldGroup>
 
-        <FieldGroup title="Прокачка">
-          <div>
-            <DataField label="Уровень Королевской башни" value={nd(gameData.kingTowerLevel)} mono />
-            <DataField label="Уровень коллекции" value={nd(gameData.collectionLevel)} mono />
-            <DataField label="Арена" value={orNoData(gameData.arenaName)} />
-            <DataField label="Трофеи" value={nd(gameData.trophies)} mono />
-            <DataField
-              label="Открытые карты"
-              value={formatCount(gameData.unlockedCards, gameData.totalCards, NO_DATA)}
-              mono
-            />
-            <DataField label="Всего карт в игре" value={nd(gameData.totalCards)} mono />
-          </div>
-          <div>
-            <DataField label="Карты 16 уровня" value={nd(gameData.level16Cards)} mono />
-            <DataField label="Карты 15 уровня" value={nd(gameData.level15Cards)} mono />
-            <DataField label="Карты 14 уровня" value={nd(gameData.level14Cards)} mono />
-            <DataField label="Эволюции" value={nd(gameData.evolutions)} mono />
-            <DataField label="Герои" value={nd(gameData.heroes)} mono />
-          </div>
-        </FieldGroup>
+        {account.gameId === 'clash-royale' ? (
+          <>
+            <FieldGroup title="Прокачка">
+              <div>
+                <DataField
+                  label="Уровень Королевской башни"
+                  value={nd(gameData.kingTowerLevel)}
+                  mono
+                />
+                <DataField label="Уровень коллекции" value={nd(gameData.collectionLevel)} mono />
+                <DataField label="Арена" value={orNoData(gameData.arenaName)} />
+                <DataField label="Трофеи" value={nd(gameData.trophies)} mono />
+                <DataField
+                  label="Открытые карты"
+                  value={formatCount(gameData.unlockedCards, gameData.totalCards, NO_DATA)}
+                  mono
+                />
+                <DataField label="Всего карт в игре" value={nd(gameData.totalCards)} mono />
+              </div>
+              <div>
+                <DataField label="Карты 16 уровня" value={nd(gameData.level16Cards)} mono />
+                <DataField label="Карты 15 уровня" value={nd(gameData.level15Cards)} mono />
+                <DataField label="Карты 14 уровня" value={nd(gameData.level14Cards)} mono />
+                <DataField label="Эволюции" value={nd(gameData.evolutions)} mono />
+                <DataField label="Герои" value={nd(gameData.heroes)} mono />
+              </div>
+            </FieldGroup>
 
-        <FieldGroup title="Ресурсы">
-          <div>
-            <DataField label="Кристаллы" value={nd(gameData.gems)} mono />
-          </div>
-          <div>
-            <DataField label="Золото" value={nd(gameData.gold)} mono />
-          </div>
-        </FieldGroup>
+            <FieldGroup title="Ресурсы">
+              <div>
+                <DataField label="Кристаллы" value={nd(gameData.gems)} mono />
+              </div>
+              <div>
+                <DataField label="Золото" value={nd(gameData.gold)} mono />
+              </div>
+            </FieldGroup>
 
-        <FieldGroup title="Коллекционные предметы">
-          <div>
-            <DataField
-              label="Возраст аккаунта"
-              value={gameData.accountAgeYears === null ? NO_DATA : `${gameData.accountAgeYears} г.`}
-              mono
-            />
-            <DataField label="Эмоции" value={nd(gameData.emotes)} mono />
-          </div>
-          <div>
-            <DataField label="Редкие эмоции" value={nd(gameData.rareEmotes)} mono />
-            <DataField label="Скины башен" value={nd(gameData.towerSkins)} mono />
-            <DataField label="Баннеры" value={nd(gameData.banners)} mono />
-          </div>
-        </FieldGroup>
+            <FieldGroup title="Коллекционные предметы">
+              <div>
+                <DataField
+                  label="Возраст аккаунта"
+                  value={
+                    gameData.accountAgeYears === null
+                      ? NO_DATA
+                      : `${gameData.accountAgeYears} г.`
+                  }
+                  mono
+                />
+                <DataField label="Эмоции" value={nd(gameData.emotes)} mono />
+              </div>
+              <div>
+                <DataField label="Редкие эмоции" value={nd(gameData.rareEmotes)} mono />
+                <DataField label="Скины башен" value={nd(gameData.towerSkins)} mono />
+                <DataField label="Баннеры" value={nd(gameData.banners)} mono />
+              </div>
+            </FieldGroup>
 
-        <FieldGroup title="Соревновательные показатели">
-          <div>
-            <DataField label="Текущие трофеи" value={nd(gameData.trophies)} mono />
-            <DataField label="Рекорд трофеев" value={nd(gameData.highestTrophies)} mono />
-          </div>
-          <div>
-            <DataField label="Top Global" value={orNoData(gameData.achievements.topGlobal)} />
-            <DataField
-              label="Гранд-турнир"
-              value={orNoData(gameData.achievements.grandTournament)}
-            />
-            <DataField
-              label="Испытание 20 побед"
-              value={orNoData(gameData.achievements.twentyWinChallenge)}
-            />
-          </div>
-        </FieldGroup>
+            <FieldGroup title="Соревновательные показатели">
+              <div>
+                <DataField label="Текущие трофеи" value={nd(gameData.trophies)} mono />
+                <DataField label="Рекорд трофеев" value={nd(gameData.highestTrophies)} mono />
+              </div>
+              <div>
+                <DataField label="Top Global" value={orNoData(gameData.achievements.topGlobal)} />
+                <DataField
+                  label="Гранд-турнир"
+                  value={orNoData(gameData.achievements.grandTournament)}
+                />
+                <DataField
+                  label="Испытание 20 побед"
+                  value={orNoData(gameData.achievements.twentyWinChallenge)}
+                />
+              </div>
+            </FieldGroup>
+          </>
+        ) : (
+          <FieldGroup title="Характеристики объявления">
+            {sourceAttributes.length ? (
+              sourceAttributes.map(([key, value]) => (
+                <DataField
+                  key={key}
+                  label={ATTRIBUTE_LABELS[key] ?? key}
+                  value={typeof value === 'boolean' ? formatBool(value) : String(value)}
+                  mono={typeof value === 'number'}
+                />
+              ))
+            ) : (
+              <p className="text-[12px] text-ink-4">Структурированные данные не найдены</p>
+            )}
+          </FieldGroup>
+        )}
 
         <FieldGroup title="Передача аккаунта">
           <div>

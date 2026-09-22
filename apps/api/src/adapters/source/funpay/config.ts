@@ -4,6 +4,10 @@
  */
 export const FUNPAY_CATEGORIES: Record<string, { lotId: number; label: string }> = {
   'clash-royale': { lotId: 149, label: 'Clash Royale — аккаунты' },
+  'pubg-mobile': { lotId: 346, label: 'PUBG Mobile — аккаунты' },
+  'car-parking-multiplayer': { lotId: 1534, label: 'Car Parking Multiplayer — аккаунты' },
+  'arknights-endfield': { lotId: 3939, label: 'Arknights: Endfield — аккаунты' },
+  'standoff-2': { lotId: 454, label: 'Standoff 2 — аккаунты' },
 };
 
 export const FUNPAY_BASE = 'https://funpay.com';

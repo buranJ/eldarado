@@ -38,9 +38,6 @@ export const registerSyncRoutes = (app: FastifyInstance, scheduler: SyncSchedule
 
   app.post('/api/sync/run', async (request, reply) => {
     const body = (request.body ?? {}) as { gameId?: string; marketplace?: string };
-    if (body.gameId && body.gameId !== 'clash-royale') {
-      return reply.code(422).send({ error: 'Парсер источника для этой игры ещё не подключён' });
-    }
     const running = startCollection({
       gameId: body.gameId,
       marketplace: body.marketplace,

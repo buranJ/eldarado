@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { CurrencyCode } from '@gamestock/domain';
 import type { RawOffer } from '../types.js';
-import { translateClashRoyaleTitle } from '../../../localization/clash-royale.js';
+import { translateGameTitle } from '../../../localization/games.js';
 import { FUNPAY_BASE } from './config.js';
 
 const CURRENCY_BY_SYMBOL: Record<string, CurrencyCode> = {
@@ -77,6 +77,95 @@ export const stripAutoSuffix = (
   return rawTitle.slice(0, index).trim();
 };
 
+const stripGameSuffix = (
+  rawTitle: string,
+  gameId: string | undefined,
+  attrs: Record<string, string | undefined>,
+): string => {
+  if (gameId === 'clash-royale') return stripAutoSuffix(rawTitle, attrs);
+  if (gameId === 'pubg-mobile') {
+    return rawTitle
+      .replace(
+        /,\s*(?:продажа|покупка),\s*\d+\s+уровень,\s*ранг:.*$/iu,
+        '',
+      )
+      .trim();
+  }
+  if (gameId === 'arknights-endfield') {
+    return rawTitle
+      .replace(
+        /,\s*\d+\s+уровень аккаунта,\s*\d+\s+уровень исследования\s*$/iu,
+        '',
+      )
+      .trim();
+  }
+  if (gameId === 'standoff-2' && attrs.rank) {
+    const escapedRank = attrs.rank.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return rawTitle.replace(new RegExp(`,\\s*${escapedRank}\\s*$`, 'iu'), '').trim();
+  }
+  return rawTitle.trim();
+};
+
+const titleNumber = (title: string, labels: string): number | null => {
+  const match = title.match(new RegExp(`(\\d[\\d\\s.,]*)\\s*(?:${labels})`, 'iu'));
+  if (!match) return null;
+  const parsed = Number.parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
+  return Number.isFinite(parsed) ? Math.round(parsed) : null;
+};
+
+const gameDataFor = (
+  gameId: string | undefined,
+  title: string,
+  attrs: Record<string, string | undefined>,
+): Record<string, unknown> => {
+  const titleEn = gameId ? translateGameTitle(gameId, title) : title;
+  switch (gameId) {
+    case 'pubg-mobile':
+      return {
+        titleEn,
+        accountLevel: toInt(attrs.level),
+        rank: attrs.rank ?? null,
+        offerType: attrs.type ?? null,
+        mythicSkins: attrs.myth ?? null,
+        upgradableWeapons: attrs.weapon ?? null,
+        killFeedMessages: attrs.kill ?? null,
+        sportsCars: attrs.sport ?? null,
+      };
+    case 'car-parking-multiplayer':
+      return {
+        titleEn,
+        vinyls: titleNumber(title, 'винил(?:ов|ы)?|наклеек'),
+        cars: titleNumber(title, 'машин(?:ы)?|авто'),
+        coins: titleNumber(title, 'монет(?:ы)?'),
+      };
+    case 'arknights-endfield':
+      return {
+        titleEn,
+        accountLevel: toInt(attrs.levela),
+        researchLevel: toInt(attrs.levele),
+      };
+    case 'standoff-2':
+      return {
+        titleEn,
+        rank: attrs.rank ?? null,
+        accountLevel: titleNumber(title, 'уров(?:ень|ня)|лвл|lvl'),
+        playtimeHours: titleNumber(title, 'час(?:ов|а)?|hours?'),
+        gold: titleNumber(title, 'голд(?:ы|а)?|gold|g'),
+      };
+    default:
+      return {
+        arena: toInt(attrs.arena),
+        accountLevel: toInt(attrs.level),
+        trophies: toInt(attrs.cup),
+        unlockedCards: toInt(attrs.card),
+        legendaryCards: toInt(attrs.legcard),
+        nameChangeAvailable:
+          attrs.namechange === undefined ? null : /да|есть/i.test(attrs.namechange),
+        ...(gameId === 'clash-royale' ? { titleEn } : {}),
+      };
+  }
+};
+
 /** Parses a FunPay category page into raw offers. */
 export const parseCategory = (html: string, gameId?: string): RawOffer[] => {
   const $ = cheerio.load(html);
@@ -95,6 +184,14 @@ export const parseCategory = (html: string, gameId?: string): RawOffer[] => {
       card: node.attr('data-f-card'),
       legcard: node.attr('data-f-legcard'),
       namechange: node.attr('data-f-namechange'),
+      type: node.attr('data-f-type'),
+      rank: node.attr('data-f-rank'),
+      myth: node.attr('data-f-myth'),
+      weapon: node.attr('data-f-weapon'),
+      kill: node.attr('data-f-kill'),
+      sport: node.attr('data-f-sport'),
+      levela: node.attr('data-f-levela'),
+      levele: node.attr('data-f-levele'),
     };
 
     const rawTitle = node.find('.tc-desc-text').first().text().trim();
@@ -114,11 +211,7 @@ export const parseCategory = (html: string, gameId?: string): RawOffer[] => {
 
     if (!sellerExternalId) return;
 
-    const sellerTitle = stripAutoSuffix(rawTitle, attrs);
-    const localizedGameData =
-      gameId === 'clash-royale'
-        ? { titleEn: translateClashRoyaleTitle(sellerTitle) }
-        : {};
+    const sellerTitle = stripGameSuffix(rawTitle, gameId, attrs);
 
     offers.push({
       externalId,
@@ -137,18 +230,7 @@ export const parseCategory = (html: string, gameId?: string): RawOffer[] => {
         isOnline: node.attr('data-online') === '1',
         profileUrl: `${FUNPAY_BASE}/users/${sellerExternalId}/`,
       },
-      gameData: {
-        arena: toInt(attrs.arena),
-        accountLevel: toInt(attrs.level),
-        trophies: toInt(attrs.cup),
-        unlockedCards: toInt(attrs.card),
-        legendaryCards: toInt(attrs.legcard),
-        nameChangeAvailable:
-          attrs.namechange === undefined
-            ? null
-            : /да|есть/i.test(attrs.namechange),
-        ...localizedGameData,
-      },
+      gameData: gameDataFor(gameId, sellerTitle, attrs),
     });
   });
 

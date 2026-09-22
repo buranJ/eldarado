@@ -35,4 +35,6 @@ export interface ClashRoyaleGameData {
     grandTournament: string | null;
     twentyWinChallenge: string | null;
   };
+  /** Raw structured attributes parsed for the selected game. */
+  sourceAttributes: Record<string, number | boolean | string | null>;
 }

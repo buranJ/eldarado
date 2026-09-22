@@ -13,7 +13,7 @@ import { ExtractionSchema, toAttributeMap } from '../analysis/schema.js';
 import { prisma } from '../lib/db.js';
 import { sourceImagePath } from '../lib/source-images.js';
 import { convertMinor, DESTINATION_FEE_RATE } from '../config/marketplaces.js';
-import { translateClashRoyaleTitle } from '../localization/clash-royale.js';
+import { translateGameTitle } from '../localization/games.js';
 
 const optionalField = (max: number) => z.string().max(max).optional();
 
@@ -89,8 +89,14 @@ const saleState = (
   }
 };
 
+const INTERNAL_GAME_IDS: Record<string, string> = {
+  '21': 'pubg-mobile',
+  '52': 'clash-royale',
+  '339': 'car-parking-multiplayer',
+};
+
 const internalGameId = (eldoradoGameId: string): string =>
-  eldoradoGameId === '52' ? 'clash-royale' : `eldorado-${eldoradoGameId}`;
+  INTERNAL_GAME_IDS[eldoradoGameId] ?? `eldorado-${eldoradoGameId}`;
 
 const draftFor = (item: InventoryItem) => {
   const parsed = ExtractionSchema.safeParse(item.listing.analysis?.extracted);
@@ -104,12 +110,16 @@ const draftFor = (item: InventoryItem) => {
   };
   const storedTitle =
     typeof sourceAttributes.titleEn === 'string' ? sourceAttributes.titleEn.trim() : '';
-  const sellerSummary =
-    item.gameId === 'clash-royale'
-      ? storedTitle || translateClashRoyaleTitle(item.listing.sellerTitle)
-      : null;
+  const sellerSummary = storedTitle || translateGameTitle(item.gameId, item.listing.sellerTitle);
   return buildDraft({
-    gameName: item.gameId === 'clash-royale' ? 'Clash Royale' : item.gameId,
+    gameName:
+      item.gameId === 'clash-royale'
+        ? 'Clash Royale'
+        : item.gameId === 'pubg-mobile'
+          ? 'PUBG Mobile'
+          : item.gameId === 'car-parking-multiplayer'
+            ? 'Car Parking Multiplayer'
+            : item.gameId,
     sellerSummary,
     sellMinor: item.manualMinor ?? item.recommendedMinor,
     currency: item.purchaseCurrency,
@@ -201,7 +211,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
           id: `eldorado:${offer.id}`,
           inventoryItemId: null,
           accountId: 'Внешний лот',
-          gameId: offer.gameId === '52' ? 'clash-royale' : `eldorado-${offer.gameId}`,
+          gameId: internalGameId(offer.gameId),
           gameLabel: game?.gameName ?? `Игра Eldorado ${offer.gameId}`,
           title: offer.title,
           marketplace: 'eldorado',

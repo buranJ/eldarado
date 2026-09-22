@@ -47,17 +47,30 @@ export const prefilter = (
   }
 
   const trophies = gameData.trophies as number | null;
-  if (trophies === null || trophies === undefined) {
-    reasons.push('не указаны кубки');
-  } else if (trophies < config.minTrophies) {
-    reasons.push(`кубков ${trophies} < ${config.minTrophies}`);
+  if (config.minTrophies !== undefined) {
+    if (trophies === null || trophies === undefined) {
+      reasons.push('не указаны кубки');
+    } else if (trophies < config.minTrophies) {
+      reasons.push(`кубков ${trophies} < ${config.minTrophies}`);
+    }
   }
 
   const cards = gameData.unlockedCards as number | null;
-  if (cards === null || cards === undefined) {
-    reasons.push('не указано число карт');
-  } else if (cards < config.minCards) {
-    reasons.push(`карт ${cards} < ${config.minCards}`);
+  if (config.minCards !== undefined) {
+    if (cards === null || cards === undefined) {
+      reasons.push('не указано число карт');
+    } else if (cards < config.minCards) {
+      reasons.push(`карт ${cards} < ${config.minCards}`);
+    }
+  }
+
+  const accountLevel = gameData.accountLevel as number | null;
+  if (config.minAccountLevel !== undefined) {
+    if (accountLevel === null || accountLevel === undefined) {
+      reasons.push('не указан уровень аккаунта');
+    } else if (accountLevel < config.minAccountLevel) {
+      reasons.push(`уровень аккаунта ${accountLevel} < ${config.minAccountLevel}`);
+    }
   }
 
   if (config.requireAutoDelivery && !offer.autoDelivery) {

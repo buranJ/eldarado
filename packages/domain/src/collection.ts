@@ -39,8 +39,10 @@ export interface PrefilterConfig {
   minPrice: number;
   maxPrice: number;
   priceCurrency: string;
-  minTrophies: number;
-  minCards: number;
+  /** Game-specific thresholds are omitted for games that do not expose them. */
+  minTrophies?: number;
+  minCards?: number;
+  minAccountLevel?: number;
   requireAutoDelivery: boolean;
 }
 

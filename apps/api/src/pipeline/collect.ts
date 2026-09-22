@@ -44,6 +44,8 @@ export interface CollectOptions {
   dryRun?: boolean;
   /** Verify unseen source offers and permanently remove stale source records. */
   pruneMissing?: boolean;
+  /** Stop after this many photo-qualified listings have been stored. */
+  maxListings?: number;
 }
 
 /**
@@ -80,14 +82,16 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
     counters.seen = offers.length;
 
     if (options.dryRun) {
-      for (const offer of offers) {
+      for (const offer of offers.slice(0, options.maxListings ?? offers.length)) {
         if (prefilter(offer, config, gameId).passed) counters.passed += 1;
         else counters.rejected += 1;
       }
     } else {
       const seenIds: string[] = [];
+      let storedListings = 0;
 
       for (const offer of offers) {
+        if (options.maxListings !== undefined && storedListings >= options.maxListings) break;
         const verdict = prefilter(offer, config, gameId);
         const hash = hashOf(offer);
         const existing = await prisma.listing.findUnique({
@@ -114,7 +118,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
           }
         }
 
-        const hasImages = (downloadedImages?.length ?? existing?.images.length ?? 0) > 0;
+        const hasImages = (downloadedImages?.length ?? existing?.images.length ?? 0) >= 2;
         if (!hasImages) {
           counters.rejected += 1;
           if (
@@ -236,6 +240,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
               .filter((fileName) => !storedNames.has(fileName)),
           );
         }
+        storedListings += 1;
       }
 
       if (options.pruneMissing) {

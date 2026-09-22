@@ -5,6 +5,11 @@ export const ELDORADO_ACCOUNT_GAMES: Record<
   { gameId: string; seoAlias: string }
 > = {
   'clash-royale': { gameId: '52', seoAlias: 'clash-royale-accounts' },
+  'pubg-mobile': { gameId: '21', seoAlias: 'pubg-mobile-accounts' },
+  'car-parking-multiplayer': {
+    gameId: '339',
+    seoAlias: 'car-parking-multiplayer-accounts',
+  },
 };
 
 export interface EldoradoOfferImage {

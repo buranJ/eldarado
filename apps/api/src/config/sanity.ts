@@ -18,6 +18,17 @@ export const SANITY: Record<string, Record<string, SanityRange>> = {
     legendaryCards: { min: 0, max: 250, label: 'легендарные карты' },
     accountLevel: { min: 0, max: 10_000, label: 'уровень' },
   },
+  'pubg-mobile': {
+    accountLevel: { min: 1, max: 100, label: 'уровень аккаунта' },
+  },
+  'arknights-endfield': {
+    accountLevel: { min: 1, max: 60, label: 'уровень аккаунта' },
+    researchLevel: { min: 1, max: 7, label: 'уровень исследования' },
+  },
+  'standoff-2': {
+    accountLevel: { min: 1, max: 1_000, label: 'уровень аккаунта' },
+    playtimeHours: { min: 0, max: 50_000, label: 'часы игры' },
+  },
 };
 
 export interface SanityResult {

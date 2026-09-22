@@ -1,10 +1,12 @@
+import { translateWithRules, type TranslationRule } from './rule-based.js';
+
 /**
  * FunPay sellers mostly write compact, keyword-heavy titles. This dictionary
  * translates those titles into the terms Clash Royale players actually use;
  * it intentionally does not call a general-purpose translator or send source
  * text to a third party.
  */
-const RULES: ReadonlyArray<readonly [RegExp, string]> = [
+const RULES: readonly TranslationRule[] = [
   [/clash\s+royal(?:e)?/giu, 'Clash Royale'],
   [/кл[еэё]ш(?:\s+роял[ье])?|кл[еэё]шк(?:а|е|у|ой)/giu, 'Clash Royale'],
   [/королевск(?:ая|ой)\s+башн(?:я|и)/giu, 'King Tower'],
@@ -103,28 +105,15 @@ const RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [/в\s+подарок/giu, 'included as a bonus'],
 ];
 
-const hasUsefulContent = (value: string): boolean => /[a-z\d]/iu.test(value);
-
 /**
  * Produces a Latin, buyer-facing summary while preserving numbers, player
  * tags, emojis and already-English fragments. Unknown Cyrillic fragments are
  * omitted rather than shown to an English-only buyer as misleading gibberish.
  */
 export const translateClashRoyaleTitle = (source: string): string => {
-  let translated = source.normalize('NFKC');
-  for (const [pattern, replacement] of RULES) {
-    translated = translated.replace(pattern, replacement);
-  }
-
-  translated = translated
-    .replace(/(\d+(?:[.,]\d+)?)\s*[кk]\s+(?=(?:trophies|Gems|Gold)\b)/giu, '$1K ')
-    .replace(/(\d+)\s*(?:LVL|lvl)\b/giu, '$1 LVL')
-    .replace(/\p{Script=Cyrillic}+/gu, ' ')
-    .replace(/\s*([|•,+])\s*/g, ' $1 ')
-    .replace(/([|•,+])(?:\s*\1)+/g, '$1')
-    .replace(/\s{2,}/g, ' ')
-    .replace(/^[\s|•,+:;—-]+|[\s|•,+:;—-]+$/g, '')
-    .trim();
-
-  return hasUsefulContent(translated) ? translated : 'Clash Royale account';
+  const translated = translateWithRules(source, RULES, 'Clash Royale account');
+  return translated.replace(
+    /(\d+(?:[.,]\d+)?)\s*[кk]\s+(?=(?:trophies|Gems|Gold)\b)/giu,
+    '$1K ',
+  );
 };

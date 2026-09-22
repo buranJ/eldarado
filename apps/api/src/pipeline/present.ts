@@ -110,7 +110,7 @@ const toApiAnalysis = (
 };
 
 export const toApiAccount = (row: ListingRow) => {
-  const sourceData = (row.gameData ?? {}) as Record<string, number | boolean | null>;
+  const sourceData = (row.gameData ?? {}) as Record<string, number | boolean | string | null>;
   /*
    * Attributes the model read out of the seller's title are layered over the
    * ones the marketplace published, so the UI shows everything that is known
@@ -183,6 +183,7 @@ export const toApiAccount = (row: ListingRow) => {
       towerSkins: numberOf(gameData, 'towerSkins'),
       banners: numberOf(gameData, 'banners'),
       achievements: { topGlobal: null, grandTournament: null, twentyWinChallenge: null },
+      sourceAttributes: gameData,
     },
     /* Transfer terms come from the seller's free text; null renders as «Нет данных». */
     transfer: {

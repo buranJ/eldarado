@@ -2,10 +2,22 @@ import { collect } from '../pipeline/collect.js';
 import { prisma } from '../lib/db.js';
 
 const dryRun = process.argv.includes('--dry-run');
+const valueOf = (name: string): string | undefined =>
+  process.argv.find((argument) => argument.startsWith(`--${name}=`))?.split('=').slice(1).join('=');
+const gameId = valueOf('game') ?? 'clash-royale';
+const limitValue = valueOf('limit');
+const maxListings = limitValue ? Number.parseInt(limitValue, 10) : undefined;
 
 const main = async (): Promise<void> => {
-  console.log(`Сбор FunPay · Clash Royale${dryRun ? ' (без записи в БД)' : ''}`);
-  const run = await collect({ dryRun });
+  console.log(`Сбор FunPay · ${gameId}${dryRun ? ' (без записи в БД)' : ''}`);
+  const run = await collect({
+    dryRun,
+    gameId,
+    maxListings:
+      maxListings !== undefined && Number.isInteger(maxListings) && maxListings > 0
+        ? maxListings
+        : undefined,
+  });
   console.table({
     'увидено на странице': run.seen,
     'новых': run.created,

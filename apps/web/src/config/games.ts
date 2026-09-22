@@ -2,12 +2,12 @@ import type { Game, GameId } from '@gamestock/domain';
 
 export type AppGame = Game & {
   /** Eldorado's stable catalogue identifier for account offers. */
-  eldoradoGameId: string;
+  eldoradoGameId: string | null;
   /** Whether a source parser is currently configured for this game. */
   collectionEnabled: boolean;
 };
 
-/** Games currently present in the connected Eldorado seller account. */
+/** Games available in the workspace selector. */
 export const GAMES: AppGame[] = [
   {
     id: 'clash-royale',
@@ -75,6 +75,50 @@ export const GAMES: AppGame[] = [
     },
   },
   {
+    id: 'pubg-mobile',
+    name: 'PUBG Mobile',
+    shortName: 'PUBG Mobile',
+    status: 'active',
+    monogram: 'PM',
+    accent: '#d9a64f',
+    eldoradoGameId: '21',
+    collectionEnabled: true,
+    scoringModel: null,
+  },
+  {
+    id: 'car-parking-multiplayer',
+    name: 'Car Parking Multiplayer',
+    shortName: 'Car Parking',
+    status: 'active',
+    monogram: 'CP',
+    accent: '#dd9459',
+    eldoradoGameId: '339',
+    collectionEnabled: true,
+    scoringModel: null,
+  },
+  {
+    id: 'arknights-endfield',
+    name: 'Arknights: Endfield',
+    shortName: 'Endfield',
+    status: 'active',
+    monogram: 'AE',
+    accent: '#70a7bd',
+    eldoradoGameId: null,
+    collectionEnabled: true,
+    scoringModel: null,
+  },
+  {
+    id: 'standoff-2',
+    name: 'Standoff 2',
+    shortName: 'Standoff 2',
+    status: 'active',
+    monogram: 'S2',
+    accent: '#c97a62',
+    eldoradoGameId: null,
+    collectionEnabled: true,
+    scoringModel: null,
+  },
+  {
     id: 'eldorado-179',
     name: 'Jujutsu Kaisen Phantom Parade',
     shortName: 'JJK Phantom Parade',
@@ -93,28 +137,6 @@ export const GAMES: AppGame[] = [
     monogram: 'AK',
     accent: '#70a7bd',
     eldoradoGameId: '166',
-    collectionEnabled: false,
-    scoringModel: null,
-  },
-  {
-    id: 'eldorado-339',
-    name: 'Car Parking Multiplayer',
-    shortName: 'Car Parking',
-    status: 'active',
-    monogram: 'CP',
-    accent: '#dd9459',
-    eldoradoGameId: '339',
-    collectionEnabled: false,
-    scoringModel: null,
-  },
-  {
-    id: 'eldorado-21',
-    name: 'PUBG Mobile',
-    shortName: 'PUBG Mobile',
-    status: 'active',
-    monogram: 'PM',
-    accent: '#d9a64f',
-    eldoradoGameId: '21',
     collectionEnabled: false,
     scoringModel: null,
   },
