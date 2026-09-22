@@ -23,10 +23,11 @@ const useSectionTitle = (): string => {
 export function Topbar() {
   const title = useSectionTitle();
   const { gameId, notifyDataChanged } = useAppState();
-  const toast = useToast();
-  const sync = useSync();
-  const now = useNow();
   const game = getGame(gameId);
+  const toast = useToast();
+  const sync = useSync(gameId);
+  const now = useNow();
+  const canCollect = game.collectionEnabled;
 
   const lastRun = sync.status?.lastRun ?? null;
   const busy = sync.triggering || (sync.status?.running ?? false);
@@ -37,6 +38,7 @@ export function Topbar() {
     : null;
 
   const onRefresh = async () => {
+    if (!canCollect) return;
     const result = await sync.run(gameId);
     if (result.ok) {
       notifyDataChanged();
@@ -54,6 +56,7 @@ export function Topbar() {
   };
 
   const onAutoSyncChange = async (enabled: boolean) => {
+    if (!canCollect) return;
     const result = await sync.setAutoSync(enabled);
     if (result.ok) {
       toast.push({
@@ -84,12 +87,20 @@ export function Topbar() {
           <span
             className={cn(
               'size-1.5 rounded-full',
-              offline ? 'bg-neg' : busy ? 'animate-pulse bg-info' : 'bg-pos',
+              offline
+                ? 'bg-neg'
+                : !canCollect
+                  ? 'bg-ink-4'
+                  : busy
+                    ? 'animate-pulse bg-info'
+                    : 'bg-pos',
             )}
           />
           <span className="text-[12px] text-ink-2">
             {offline
               ? 'Бэкенд недоступен'
+              : !canCollect
+                ? 'Сбор для игры не настроен'
               : busy
                 ? 'Идёт сбор данных…'
                 : 'Сканирование: ожидание'}
@@ -104,7 +115,9 @@ export function Topbar() {
             <span className="text-ink-2">
               {lastRun
                 ? `${isToday(lastRun.startedAt) ? 'сегодня' : 'ранее'}, ${formatTime(lastRun.startedAt)}`
-                : 'не выполнялся'}
+                : canCollect
+                  ? 'не выполнялся'
+                  : '—'}
             </span>
           </span>
           <label className="flex items-center gap-2 text-ink-3" title="Ежедневный сбор в 08:00">
@@ -112,11 +125,11 @@ export function Topbar() {
             <Switch
               label="Автоматический ежедневный сбор"
               checked={autoSyncEnabled}
-              disabled={sync.updatingAutoSync || offline}
+              disabled={!canCollect || sync.updatingAutoSync || offline}
               onChange={onAutoSyncChange}
             />
           </label>
-          {autoSyncEnabled && nextRunIn !== null ? (
+          {canCollect && autoSyncEnabled && nextRunIn !== null ? (
             <span className="text-ink-3">
               Следующий сбор через <span className="text-ink-2">{formatDuration(nextRunIn)}</span>
             </span>
@@ -128,7 +141,8 @@ export function Topbar() {
           size="sm"
           icon={RefreshCw}
           onClick={onRefresh}
-          disabled={busy}
+          disabled={!canCollect || busy}
+          title={canCollect ? undefined : 'Парсер для этой игры ещё не подключён'}
           className={busy ? '[&>svg]:animate-spin' : undefined}
         >
           Собрать сейчас

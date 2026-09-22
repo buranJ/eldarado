@@ -13,7 +13,7 @@ import type { TabItem } from '@/components/ui/Tabs';
 import { Button, IconButton } from '@/components/ui/Button';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Modal } from '@/components/ui/Modal';
-import { SearchInput, Select } from '@/components/ui/Field';
+import { SearchInput } from '@/components/ui/Field';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
 import { EmptyState } from '@/components/EmptyState';
@@ -47,17 +47,13 @@ export function ListingsPage() {
   const connection = useQuery(() => api.eldoradoStatus(), []);
 
   const [tab, setTab] = useState<TabValue>('all');
-  const [gameFilter, setGameFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<MarketplaceListing | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const rows = listings.data?.items ?? EMPTY_LISTINGS;
-  const games = useMemo(
-    () =>
-      [...new Map(rows.map((row) => [row.gameId, row.gameLabel ?? row.gameId])).entries()].sort(
-        ([, left], [, right]) => left.localeCompare(right, 'ru'),
-      ),
-    [rows],
+  const allRows = listings.data?.items ?? EMPTY_LISTINGS;
+  const rows = useMemo(
+    () => allRows.filter((listing) => listing.gameId === state.gameId),
+    [allRows, state.gameId],
   );
 
   const counts = useMemo(() => {
@@ -67,6 +63,7 @@ export function ListingsPage() {
       published: 0,
       paused: 0,
       sold: 0,
+      closed: 0,
       error: 0,
       deleted: 0,
     };
@@ -80,6 +77,7 @@ export function ListingsPage() {
     { value: 'published', label: 'Опубликованы', count: counts.published },
     { value: 'paused', label: 'Приостановлены', count: counts.paused },
     { value: 'sold', label: 'Проданы', count: counts.sold },
+    { value: 'closed', label: 'Закрыты', count: counts.closed },
     { value: 'error', label: 'Ошибка', count: counts.error },
     { value: 'deleted', label: 'Удалены', count: counts.deleted },
   ];
@@ -88,13 +86,12 @@ export function ListingsPage() {
     const query = search.trim().toLowerCase();
     return rows.filter((listing) => {
       if (tab !== 'all' && listing.status !== tab) return false;
-      if (gameFilter !== 'all' && listing.gameId !== gameFilter) return false;
       if (!query) return true;
       return `${listing.id} ${listing.accountId} ${listing.gameLabel ?? ''} ${listing.title} ${listing.externalListingId ?? ''}`
         .toLowerCase()
         .includes(query);
     });
-  }, [rows, tab, gameFilter, search]);
+  }, [rows, tab, search]);
 
   const accessors: Record<string, SortAccessor<MarketplaceListing>> = {
     account: (row) => row.accountId,
@@ -303,23 +300,12 @@ export function ListingsPage() {
           </>
         }
         actions={
-          <>
-            <Select
-              value={gameFilter}
-              onChange={(event) => setGameFilter(event.target.value)}
-              className="w-[220px]"
-              options={[
-                { value: 'all', label: 'Все игры' },
-                ...games.map(([value, label]) => ({ value, label })),
-              ]}
-            />
-            <SearchInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Поиск по объявлениям"
-              className="w-[240px]"
-            />
-          </>
+          <SearchInput
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Поиск по объявлениям"
+            className="w-[240px]"
+          />
         }
       />
 

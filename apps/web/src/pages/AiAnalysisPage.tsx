@@ -1,4 +1,5 @@
 
+import { useMemo } from 'react';
 import { Brain, CheckCircle2, Gauge, TriangleAlert } from 'lucide-react';
 import { PageHeader, MetaItem } from '@/components/PageHeader';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
@@ -15,7 +16,8 @@ import { useAppState } from '@/app/providers/app-state-context';
 import { useSimulatedLoading } from '@/hooks/useSimulatedLoading';
 import { useQuery } from '@/hooks/useQuery';
 import { api } from '@/api/client';
-import { AI_RUNS_FIXTURE, AI_STATS } from '@/data/aiRuns';
+import { AI_RUNS_FIXTURE } from '@/data/aiRuns';
+import { getGame } from '@/config/games';
 import { formatNumber, formatPercent } from '@/utils/format';
 import { formatRelative } from '@/utils/date';
 import type { AIRun, AIRunResult } from '@gamestock/domain';
@@ -29,10 +31,20 @@ const RESULTS: Record<AIRunResult, { label: string; tone: 'pos' | 'warn' | 'neg'
 export function AiAnalysisPage() {
   const state = useAppState();
   const loading = useSimulatedLoading([state.gameId]);
+  const game = getGame(state.gameId);
+  const runs = useMemo(
+    () => AI_RUNS_FIXTURE.filter((run) => run.gameId === state.gameId),
+    [state.gameId],
+  );
 
-  const status = useQuery(() => api.analysisStatus(), [state.gameId, state.dataVersion]);
+  const status = useQuery(() => api.analysisStatus(state.gameId), [
+    state.gameId,
+    state.dataVersion,
+  ]);
   const avgDeal = status.data?.averages.deal ?? 0;
-  const recognizedShare = (AI_STATS.recognized / AI_STATS.processed) * 100;
+  const recognized = runs.filter((run) => run.result !== 'failed').length;
+  const needsReview = runs.filter((run) => run.result === 'needs_review').length;
+  const recognizedShare = runs.length > 0 ? (recognized / runs.length) * 100 : 0;
 
   const columns: Column<AIRun>[] = [
     {
@@ -125,7 +137,10 @@ export function AiAnalysisPage() {
         meta={
           <>
             <MetaItem label="Модель:" value="не подключена · mock scoring" />
-            <MetaItem label="Версия правил:" value="cr-scoring-v1.4" />
+            <MetaItem
+              label="Версия правил:"
+              value={game.scoringModel?.version ?? 'не настроена'}
+            />
             <MetaItem label="Распознано:" value={formatPercent(recognizedShare)} tone="pos" />
           </>
         }
@@ -137,19 +152,19 @@ export function AiAnalysisPage() {
         <div className="grid grid-cols-4 gap-3">
           <StatCard
             label="Обработано аккаунтов"
-            value={formatNumber(AI_STATS.processed)}
+            value={formatNumber(runs.length)}
             icon={Brain}
           />
           <StatCard
             label="Успешно распознано"
-            value={formatNumber(AI_STATS.recognized)}
+            value={formatNumber(recognized)}
             hint={formatPercent(recognizedShare)}
             icon={CheckCircle2}
             tone="pos"
           />
           <StatCard
             label="Требует проверки"
-            value={formatNumber(AI_STATS.needsReview)}
+            value={formatNumber(needsReview)}
             icon={TriangleAlert}
           />
           <StatCard
@@ -173,7 +188,7 @@ export function AiAnalysisPage() {
         />
         <DataTable
           columns={columns}
-          rows={AI_RUNS_FIXTURE}
+          rows={runs}
           rowKey={(row) => row.id}
           loading={loading}
           minWidth={1120}

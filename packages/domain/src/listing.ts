@@ -2,7 +2,14 @@ import type { Money } from './common';
 import type { GameId } from './game';
 import type { MarketplaceId } from './marketplace';
 
-export type ListingStatus = 'draft' | 'published' | 'paused' | 'sold' | 'error' | 'deleted';
+export type ListingStatus =
+  | 'draft'
+  | 'published'
+  | 'paused'
+  | 'sold'
+  | 'closed'
+  | 'error'
+  | 'deleted';
 
 export interface MarketplaceListing {
   id: string;

@@ -65,7 +65,7 @@ export function MarketplacePage() {
     () => api.listings(query),
     [JSON.stringify(query), state.dataVersion],
   );
-  const stats = useQuery(() => api.syncStatus(), [listings.data]);
+  const stats = useQuery(() => api.syncStatus(state.gameId), [state.gameId, listings.data]);
 
   const rows = listings.data?.items ?? [];
   const total = listings.data?.total ?? 0;

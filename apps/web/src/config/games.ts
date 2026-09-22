@@ -1,10 +1,14 @@
 import type { Game, GameId } from '@gamestock/domain';
 
-/**
- * Game registry. The second title is intentionally unnamed — it exists to keep
- * every game-scoped screen honest about being multi-game from day one.
- */
-export const GAMES: Game[] = [
+export type AppGame = Game & {
+  /** Eldorado's stable catalogue identifier for account offers. */
+  eldoradoGameId: string;
+  /** Whether a source parser is currently configured for this game. */
+  collectionEnabled: boolean;
+};
+
+/** Games currently present in the connected Eldorado seller account. */
+export const GAMES: AppGame[] = [
   {
     id: 'clash-royale',
     name: 'Clash Royale',
@@ -12,6 +16,8 @@ export const GAMES: Game[] = [
     status: 'active',
     monogram: 'CR',
     accent: '#6e8bff',
+    eldoradoGameId: '52',
+    collectionEnabled: true,
     scoringModel: {
       version: 'cr-quality-v1',
       factors: [
@@ -69,17 +75,52 @@ export const GAMES: Game[] = [
     },
   },
   {
-    id: 'game-2',
-    name: 'Вторая игра',
-    shortName: '—',
-    status: 'coming_soon',
-    monogram: '?',
-    accent: '#6a6a77',
+    id: 'eldorado-179',
+    name: 'Jujutsu Kaisen Phantom Parade',
+    shortName: 'JJK Phantom Parade',
+    status: 'active',
+    monogram: 'JK',
+    accent: '#d96c75',
+    eldoradoGameId: '179',
+    collectionEnabled: false,
+    scoringModel: null,
+  },
+  {
+    id: 'eldorado-166',
+    name: 'Arknights',
+    shortName: 'Arknights',
+    status: 'active',
+    monogram: 'AK',
+    accent: '#70a7bd',
+    eldoradoGameId: '166',
+    collectionEnabled: false,
+    scoringModel: null,
+  },
+  {
+    id: 'eldorado-339',
+    name: 'Car Parking Multiplayer',
+    shortName: 'Car Parking',
+    status: 'active',
+    monogram: 'CP',
+    accent: '#dd9459',
+    eldoradoGameId: '339',
+    collectionEnabled: false,
+    scoringModel: null,
+  },
+  {
+    id: 'eldorado-21',
+    name: 'PUBG Mobile',
+    shortName: 'PUBG Mobile',
+    status: 'active',
+    monogram: 'PM',
+    accent: '#d9a64f',
+    eldoradoGameId: '21',
+    collectionEnabled: false,
     scoringModel: null,
   },
 ];
 
 export const DEFAULT_GAME_ID: GameId = 'clash-royale';
 
-export const getGame = (id: GameId): Game =>
+export const getGame = (id: GameId): AppGame =>
   GAMES.find((game) => game.id === id) ?? GAMES[0];

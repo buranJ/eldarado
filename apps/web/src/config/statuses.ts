@@ -44,6 +44,7 @@ export const LISTING_STATUS: Record<ListingStatus, StatusDef> = {
   published: { label: 'Опубликовано', tone: 'pos' },
   paused: { label: 'Приостановлено', tone: 'warn' },
   sold: { label: 'Продано', tone: 'accent' },
+  closed: { label: 'Закрыто', tone: 'muted' },
   error: { label: 'Ошибка', tone: 'neg' },
   deleted: { label: 'Удалено', tone: 'muted' },
 };

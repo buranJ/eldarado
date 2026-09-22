@@ -183,12 +183,14 @@ export const api = {
   health: () => request<HealthStatus>('/health'),
   listings: (query: ListingQuery) => request<Page<GameAccount>>(`/listings?${toQuery(query)}`),
   listing: (id: string) => request<GameAccount>(`/listings/${id}`),
-  syncStatus: () => request<SyncStatus>('/sync/status'),
+  syncStatus: (gameId: string) =>
+    request<SyncStatus>(`/sync/status?gameId=${encodeURIComponent(gameId)}`),
   qualified: (gameId: string) =>
     request<{ items: GameAccount[]; total: number }>(`/qualified?gameId=${gameId}`),
   top: (gameId: string, limit = 100) =>
     request<{ items: GameAccount[]; total: number }>(`/top?gameId=${gameId}&limit=${limit}`),
-  analysisStatus: () => request<AnalysisStatus>('/analysis/status'),
+  analysisStatus: (gameId: string) =>
+    request<AnalysisStatus>(`/analysis/status?gameId=${encodeURIComponent(gameId)}`),
   overview: (gameId: string) => request<OverviewDto>(`/overview?gameId=${gameId}`),
   activity: (gameId: string, limit = 15) =>
     request<ActivityEvent[]>(`/activity?gameId=${gameId}&limit=${limit}`),

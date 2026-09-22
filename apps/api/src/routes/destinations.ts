@@ -60,6 +60,8 @@ const eldoradoState = (state: string): string => {
       return 'paused';
     case 'sold':
       return 'sold';
+    case 'closed':
+      return 'closed';
     case 'deleted':
       return 'deleted';
     default:
@@ -162,7 +164,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
           id: `eldorado:${offer.id}`,
           inventoryItemId: null,
           accountId: 'Внешний лот',
-          gameId: `eldorado-${offer.gameId}`,
+          gameId: offer.gameId === '52' ? 'clash-royale' : `eldorado-${offer.gameId}`,
           gameLabel: game?.gameName ?? `Игра Eldorado ${offer.gameId}`,
           title: offer.title,
           marketplace: 'eldorado',

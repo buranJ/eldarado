@@ -6,7 +6,7 @@ import type { CollectionRun } from '@gamestock/domain';
 const POLL_MS = 15_000;
 
 /** Live collection status from the API, polled while the app is open. */
-export const useSync = () => {
+export const useSync = (gameId: string) => {
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState(false);
@@ -15,7 +15,7 @@ export const useSync = () => {
 
   const load = useCallback(async () => {
     try {
-      const next = await api.syncStatus();
+      const next = await api.syncStatus(gameId);
       if (mounted.current) {
         setStatus(next);
         setError(null);
@@ -23,7 +23,7 @@ export const useSync = () => {
     } catch (cause) {
       if (mounted.current) setError(cause instanceof Error ? cause.message : String(cause));
     }
-  }, []);
+  }, [gameId]);
 
   useEffect(() => {
     mounted.current = true;

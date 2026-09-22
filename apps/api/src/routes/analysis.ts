@@ -15,6 +15,7 @@ export const registerAnalysisRoutes = (app: FastifyInstance): void => {
       }),
       prisma.listing.count({ where: { gameId, status: 'needs_review', disappearedAt: null } }),
       prisma.analysis.aggregate({
+        where: { listing: { is: { gameId } } },
         _avg: { dealScore: true, qualityScore: true, riskScore: true },
         _count: { _all: true },
       }),

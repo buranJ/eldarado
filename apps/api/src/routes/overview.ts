@@ -19,7 +19,10 @@ export const registerOverviewRoutes = (app: FastifyInstance): void => {
         prisma.inventoryItem.count({ where: { gameId } }),
         prisma.inventoryItem.count({ where: { gameId, status: { in: ['listed', 'reserved', 'sold'] } } }),
         prisma.inventoryItem.count({ where: { gameId, status: 'sold' } }),
-        prisma.analysis.aggregate({ _avg: { dealScore: true } }),
+        prisma.analysis.aggregate({
+          where: { listing: { is: { gameId } } },
+          _avg: { dealScore: true },
+        }),
       ]);
 
     return {
