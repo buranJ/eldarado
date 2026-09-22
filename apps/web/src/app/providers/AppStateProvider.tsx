@@ -140,11 +140,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
-  const prepareItem = useCallback(
-    (id: string) => setInventoryStatus(id, 'ready_to_list'),
-    [setInventoryStatus],
-  );
-
   /* Listings still live in fixtures until the destination marketplace is wired up. */
   const setListingStatus = useCallback(
     (listingId: string, status: ListingStatus) => {
@@ -181,7 +176,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       bulkRejectAccounts,
       purchaseAccount,
       setManualPrice,
-      prepareItem,
       setInventoryStatus,
       listings: listings.filter((listing) => listing.gameId === gameId),
       sales: sales.filter((sale) => sale.gameId === gameId),
@@ -198,7 +192,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       bulkRejectAccounts,
       purchaseAccount,
       setManualPrice,
-      prepareItem,
       setInventoryStatus,
       listings,
       sales,

@@ -32,7 +32,6 @@ export interface AppStateApi {
 
   /* Inventory — persisted through the API. */
   setManualPrice: (inventoryItemId: string, amount: number | null) => void;
-  prepareItem: (inventoryItemId: string) => void;
   setInventoryStatus: (inventoryItemId: string, status: InventoryStatus) => void;
 
   /* Still fixture-backed until stages 4–5 wire them to the API. */

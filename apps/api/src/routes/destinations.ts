@@ -119,8 +119,8 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       const input = publishSchema.parse(request.body ?? {});
       const item = await loadInventoryItem(id);
       if (!item) return reply.code(404).send({ error: 'Позиция не найдена' });
-      if (!['ready_to_list', 'preparing'].includes(item.status)) {
-        return reply.code(409).send({ error: 'Публиковать можно только подготовленную позицию' });
+      if (!['purchased', 'ready_to_list', 'preparing'].includes(item.status)) {
+        return reply.code(409).send({ error: 'Эту позицию нельзя опубликовать в текущем статусе' });
       }
       const game = ELDORADO_ACCOUNT_GAMES[item.gameId];
       if (!game) return reply.code(422).send({ error: `Для игры ${item.gameId} Eldorado не настроен` });

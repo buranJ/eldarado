@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
-import { DEFAULT_DESTINATION } from '../config/marketplaces.js';
+import { DEFAULT_DESTINATION, DEFAULT_RESALE_MULTIPLIER } from '../config/marketplaces.js';
 
 const bodySchema = z.object({ actor: z.string().optional() });
 const bulkSchema = z.object({
@@ -39,7 +39,8 @@ const inventoryData = (listing: DecisionListing, actor?: string) => ({
   purchaseCurrency: listing.priceCurrency,
   purchaseMarket: listing.marketplace,
   resaleMarket: DEFAULT_DESTINATION,
-  recommendedMinor: listing.analysis?.resalePriceMinor ?? Math.round(listing.priceMinor * 2),
+  recommendedMinor:
+    listing.analysis?.resalePriceMinor ?? Math.round(listing.priceMinor * DEFAULT_RESALE_MULTIPLIER),
   operator: actor ?? 'оператор',
 });
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Boxes, ExternalLink, FileText, MoreHorizontal, Upload } from 'lucide-react';
+import { AlertTriangle, Boxes, ExternalLink, MoreHorizontal, Upload } from 'lucide-react';
 import { PageHeader, MetaItem } from '@/components/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -95,10 +95,10 @@ export function InventoryPage() {
     },
     {
       key: 'recommended',
-      header: 'AI-цена',
+      header: 'Расчётная',
       align: 'right',
       width: 96,
-      title: 'Рекомендованная моделью цена перепродажи',
+      title: 'Базовая цена продажи: цена закупки × 2,5',
       render: (row) => (
         <span className="num text-[#93a8ff]">{formatMoney(row.resale.recommendedPrice)}</span>
       ),
@@ -173,19 +173,12 @@ export function InventoryPage() {
                 onSelect: () => focusPriceInput(row.id),
               },
               {
-                key: 'prepare',
-                label: 'Подготовить',
-                icon: FileText,
-                separatorBefore: true,
-                disabled: row.status !== 'purchased' && row.status !== 'preparing',
-                onSelect: () => state.prepareItem(row.id),
-              },
-              {
                 key: 'publish',
                 label: 'Опубликовать',
                 icon: Upload,
                 tone: 'success',
-                disabled: row.status !== 'ready_to_list' && row.status !== 'preparing',
+                separatorBefore: true,
+                disabled: !['purchased', 'ready_to_list', 'preparing'].includes(row.status),
                 onSelect: () => setPublishTarget(row),
               },
               {
@@ -209,7 +202,7 @@ export function InventoryPage() {
     <div className="space-y-4">
       <PageHeader
         title="Инвентарь"
-        subtitle="Приобретённые аккаунты и их подготовка к перепродаже"
+        subtitle="Приобретённые аккаунты и их публикация для перепродажи"
         meta={
           <>
             <MetaItem label="Позиций:" value={formatNumber(inventory.data?.total ?? 0)} />
@@ -281,7 +274,7 @@ export function InventoryPage() {
 
       <p className="text-[11.5px] leading-relaxed text-ink-4">
         Оплата на площадке-источнике проводится вручную — система только фиксирует покупку.
-        AI-цена рассчитана моделью, фактическая задаётся вручную и пойдёт в публикацию.
+        Расчётная цена без AI равна цене закупки × 2,5; фактическую цену можно изменить вручную.
       </p>
 
       {publishTarget ? (

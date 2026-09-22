@@ -11,6 +11,7 @@ import { useToast } from '@/app/providers/toast-context';
 import { Button } from '@/components/ui/Button';
 import { Checkbox, FieldLabel, Select, TextInput } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
+import { toBase } from '@/utils/money';
 
 const textareaClass =
   'w-full rounded-md border border-line-2 bg-panel-2 px-2 py-1.5 text-[12px] text-ink placeholder:text-ink-4 focus:border-accent focus:outline-none';
@@ -41,6 +42,7 @@ export function EldoradoPublishModal({
   onClose: () => void;
   onPublished: () => void;
 }) {
+  const salePrice = item.resale.manualPrice ?? item.resale.recommendedPrice;
   const toast = useToast();
   const [preview, setPreview] = useState<EldoradoPublishPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
@@ -49,7 +51,7 @@ export function EldoradoPublishModal({
   const [result, setResult] = useState<EldoradoPublishResult | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priceUsd, setPriceUsd] = useState('');
+  const [priceUsd, setPriceUsd] = useState(() => toBase(salePrice, 'USD').amount.toFixed(2));
   const [originalEmail, setOriginalEmail] = useState('yes');
   const [image, setImage] = useState<File | null>(null);
   const [accountLogin, setAccountLogin] = useState('');
