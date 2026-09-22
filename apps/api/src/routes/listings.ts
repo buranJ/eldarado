@@ -118,6 +118,25 @@ export const registerListingRoutes = (app: FastifyInstance): void => {
     return toApiAccount(row);
   });
 
+  /** Listings that passed the deterministic pre-filter, including later operator states. */
+  app.get('/api/qualified', async (request) => {
+    const { gameId = 'clash-royale' } = request.query as { gameId?: string };
+    const statuses = [
+      'ready_for_analysis',
+      'analyzed',
+      'needs_review',
+      'approved',
+      'rejected',
+      'purchased',
+    ];
+    const rows = await prisma.listing.findMany({
+      where: { gameId, disappearedAt: null, status: { in: statuses } },
+      include: { seller: true, analysis: true, images: { orderBy: { position: 'asc' } } },
+      orderBy: { firstSeenAt: 'desc' },
+    });
+    return { items: rows.map(toApiAccount), total: rows.length };
+  });
+
   /** Top accounts ranked purely by Deal Score — the product's headline screen. */
   app.get('/api/top', async (request) => {
     const { gameId = 'clash-royale', limit = '100' } = request.query as Record<string, string>;
