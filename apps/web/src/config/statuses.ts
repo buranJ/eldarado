@@ -52,6 +52,7 @@ export const LISTING_STATUS: Record<ListingStatus, StatusDef> = {
 export const SALE_STATUS: Record<SaleStatus, StatusDef> = {
   completed: { label: 'Завершена', tone: 'pos' },
   pending_payout: { label: 'Ожидает выплаты', tone: 'warn' },
+  canceled: { label: 'Отменён', tone: 'muted' },
   refunded: { label: 'Возврат', tone: 'neg' },
   disputed: { label: 'Спор', tone: 'neg' },
 };

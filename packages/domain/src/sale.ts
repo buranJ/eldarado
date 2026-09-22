@@ -2,7 +2,7 @@ import type { Money } from './common';
 import type { GameId } from './game';
 import type { MarketplaceId } from './marketplace';
 
-export type SaleStatus = 'completed' | 'pending_payout' | 'refunded' | 'disputed';
+export type SaleStatus = 'completed' | 'pending_payout' | 'canceled' | 'refunded' | 'disputed';
 
 export interface Sale {
   id: string;
@@ -11,11 +11,14 @@ export interface Sale {
   gameId: GameId;
   title: string;
   marketplace: MarketplaceId;
-  purchasePrice: Money;
+  /** Unknown for historical orders that were created outside GameStock. */
+  purchasePrice: Money | null;
   salePrice: Money;
-  fees: Money;
-  netProfit: Money;
-  roiPercent: number;
+  /** Available only when the order can be matched to a local listing. */
+  fees: Money | null;
+  netProfit: Money | null;
+  roiPercent: number | null;
   soldAt: string;
   status: SaleStatus;
+  url?: string | null;
 }

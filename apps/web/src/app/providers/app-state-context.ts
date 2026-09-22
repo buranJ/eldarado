@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { CurrencyCode, GameId, InventoryStatus, Sale } from '@gamestock/domain';
+import type { CurrencyCode, GameId, InventoryStatus } from '@gamestock/domain';
 
 export interface AppStateApi {
   /** Currently selected game — every screen is scoped to it. */
@@ -26,9 +26,6 @@ export interface AppStateApi {
   /* Inventory — persisted through the API. */
   setManualPrice: (inventoryItemId: string, amount: number | null) => void;
   setInventoryStatus: (inventoryItemId: string, status: InventoryStatus) => void;
-
-  /* Sales remain fixture-backed until their API stage is connected. */
-  sales: Sale[];
 }
 
 export const AppStateContext = createContext<AppStateApi | null>(null);

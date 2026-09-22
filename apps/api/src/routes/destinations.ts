@@ -69,6 +69,27 @@ const eldoradoState = (state: string): string => {
   }
 };
 
+const saleState = (
+  state: string,
+): 'completed' | 'pending_payout' | 'canceled' | 'refunded' | 'disputed' => {
+  switch (state.toLowerCase()) {
+    case 'completed':
+      return 'completed';
+    case 'canceled':
+    case 'cancelled':
+      return 'canceled';
+    case 'refunded':
+      return 'refunded';
+    case 'disputed':
+      return 'disputed';
+    default:
+      return 'pending_payout';
+  }
+};
+
+const internalGameId = (eldoradoGameId: string): string =>
+  eldoradoGameId === '52' ? 'clash-royale' : `eldorado-${eldoradoGameId}`;
+
 const draftFor = (item: InventoryItem) => {
   const parsed = ExtractionSchema.safeParse(item.listing.analysis?.extracted);
   const attributes = parsed.success ? toAttributeMap(parsed.data) : {};
@@ -187,6 +208,79 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       total: items.length,
       remoteError,
     };
+  });
+
+  app.get('/api/destinations/eldorado/sales', async (request, reply) => {
+    const query = z.object({ gameId: z.string().optional() }).parse(request.query ?? {});
+    try {
+      const orders = (await eldoradoClient.listSellerOrders()).filter(
+        (order) => order.category.toLowerCase() === 'account',
+      );
+      const offerIds = [...new Set(orders.map((order) => order.offerId))];
+      const localListings = await prisma.marketplaceListing.findMany({
+        where: { marketplace: 'eldorado', externalId: { in: offerIds } },
+        include: { item: { include: { listing: true } } },
+      });
+      const localByOfferId = new Map(
+        localListings.flatMap((listing) =>
+          listing.externalId ? [[listing.externalId, listing] as const] : [],
+        ),
+      );
+
+      const items = orders.flatMap((order) => {
+        const gameId = internalGameId(order.gameId);
+        if (query.gameId && query.gameId !== gameId) return [];
+        const local = localByOfferId.get(order.offerId);
+        const status = saleState(order.state);
+        const financiallySettled = status === 'completed' || status === 'pending_payout';
+        const feeMinor =
+          local && financiallySettled
+            ? Math.round(order.totalPrice.amount * 100 * DESTINATION_FEE_RATE)
+            : null;
+        const purchaseInSaleCurrencyMinor = local
+          ? convertMinor(local.purchaseMinor, local.purchaseCurrency, order.totalPrice.currency)
+          : null;
+        const netProfitMinor =
+          feeMinor !== null && purchaseInSaleCurrencyMinor !== null
+            ? Math.round(order.totalPrice.amount * 100) - feeMinor - purchaseInSaleCurrencyMinor
+            : null;
+        const roiPercent =
+          netProfitMinor !== null && purchaseInSaleCurrencyMinor && purchaseInSaleCurrencyMinor > 0
+            ? Math.round((netProfitMinor / purchaseInSaleCurrencyMinor) * 1_000) / 10
+            : null;
+
+        return [{
+          id: order.id,
+          listingId: local?.id ?? null,
+          accountId: local?.item.listing.externalId ?? order.offerId,
+          gameId,
+          title: order.title,
+          marketplace: 'eldorado' as const,
+          purchasePrice: local
+            ? { amount: local.purchaseMinor / 100, currency: local.purchaseCurrency }
+            : null,
+          salePrice: order.totalPrice,
+          fees:
+            feeMinor === null
+              ? null
+              : { amount: feeMinor / 100, currency: order.totalPrice.currency },
+          netProfit:
+            netProfitMinor === null
+              ? null
+              : { amount: netProfitMinor / 100, currency: order.totalPrice.currency },
+          roiPercent,
+          soldAt: order.stateChangedAt ?? order.createdAt,
+          status,
+          url: `https://www.eldorado.gg/order/${encodeURIComponent(order.id)}`,
+        }];
+      });
+
+      return { items, total: items.length };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = error instanceof EldoradoApiError ? error.status : 502;
+      return reply.code(status).send({ error: message });
+    }
   });
 
   /**

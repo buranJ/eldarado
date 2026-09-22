@@ -7,6 +7,9 @@ import type {
 const API_ORIGIN = 'https://www.eldorado.gg';
 const TOKEN_SAFETY_WINDOW_MS = 30_000;
 const OFFERS_PAGE_SIZE = 50;
+const ORDERS_FIRST_CURSOR =
+  '9999-99-99 99:99:99.999999999999999-9999-9999-9999-999999999999';
+const MAX_ORDER_PAGES = 500;
 
 interface TokenResponse {
   accessToken: string;
@@ -29,11 +32,28 @@ export interface EldoradoAccountGame {
   seoAlias: string;
 }
 
+export interface EldoradoSellerOrder {
+  id: string;
+  offerId: string;
+  gameId: string;
+  title: string;
+  category: string;
+  state: string;
+  createdAt: string;
+  stateChangedAt: string | null;
+  totalPrice: { amount: number; currency: string };
+}
+
 interface OfferPage {
   pageIndex: number;
   totalPages: number;
   recordCount: number;
   pageSize: number;
+  results: unknown[];
+}
+
+interface OrderPage {
+  nextPageCursor: string | null;
   results: unknown[];
 }
 
@@ -177,6 +197,68 @@ export class EldoradoClient {
     };
   }
 
+  private parseOrderPage(body: unknown): OrderPage {
+    if (typeof body !== 'object' || body === null) {
+      throw new EldoradoApiError('Eldorado вернул некорректную страницу заказов', 502);
+    }
+    const page = body as Record<string, unknown>;
+    return {
+      nextPageCursor:
+        typeof page.nextPageCursor === 'string' && page.nextPageCursor
+          ? page.nextPageCursor
+          : null,
+      results: Array.isArray(page.results) ? page.results : [],
+    };
+  }
+
+  private parseSellerOrders(candidates: unknown[]): EldoradoSellerOrder[] {
+    return candidates.flatMap((value) => {
+      if (typeof value !== 'object' || value === null) return [];
+      const order = value as Record<string, unknown>;
+      const details = order.orderOfferDetails;
+      const state = order.state;
+      const totalPrice = order.totalPrice;
+      if (
+        typeof order.id !== 'string' ||
+        typeof order.offerId !== 'string' ||
+        typeof order.createdDate !== 'string' ||
+        typeof details !== 'object' ||
+        details === null ||
+        typeof state !== 'object' ||
+        state === null ||
+        typeof totalPrice !== 'object' ||
+        totalPrice === null
+      ) {
+        return [];
+      }
+      const offer = details as Record<string, unknown>;
+      const orderState = state as Record<string, unknown>;
+      const price = totalPrice as Record<string, unknown>;
+      if (
+        typeof offer.gameId !== 'string' ||
+        typeof offer.offerTitle !== 'string' ||
+        typeof offer.category !== 'string' ||
+        typeof orderState.state !== 'string' ||
+        typeof price.amount !== 'number' ||
+        typeof price.currency !== 'string'
+      ) {
+        return [];
+      }
+      return [{
+        id: order.id,
+        offerId: order.offerId,
+        gameId: offer.gameId,
+        title: offer.offerTitle,
+        category: offer.category,
+        state: orderState.state,
+        createdAt: order.createdDate,
+        stateChangedAt:
+          typeof orderState.createdDate === 'string' ? orderState.createdDate : null,
+        totalPrice: { amount: price.amount, currency: price.currency },
+      }];
+    });
+  }
+
   /** Loads every page of the seller's offers instead of Eldorado's default first 10 rows. */
   async listOffers(): Promise<EldoradoOfferSummary[]> {
     const first = this.parseOfferPage(
@@ -193,6 +275,31 @@ export class EldoradoClient {
       ),
     );
     return this.parseOffers([first, ...remaining].flatMap((page) => page.results));
+  }
+
+  /** Loads the complete cursor-paginated seller order history. */
+  async listSellerOrders(): Promise<EldoradoSellerOrder[]> {
+    const orders: unknown[] = [];
+    const visited = new Set<string>();
+    let cursor: string | null = ORDERS_FIRST_CURSOR;
+
+    for (let pageIndex = 0; cursor && pageIndex < MAX_ORDER_PAGES; pageIndex += 1) {
+      if (visited.has(cursor)) break;
+      visited.add(cursor);
+      const query = new URLSearchParams({
+        isAscendingDateOrder: 'false',
+        orderGroup: 'Regular',
+        cursorValue: cursor,
+        pageDirection: 'Next',
+      });
+      const page = this.parseOrderPage(
+        await this.request<unknown>(`/api/orders/me/seller/orders?${query.toString()}`),
+      );
+      orders.push(...page.results);
+      cursor = page.nextPageCursor;
+    }
+
+    return this.parseSellerOrders(orders);
   }
 
   /** Public Eldorado catalogue used to resolve stable game IDs into names and URLs. */

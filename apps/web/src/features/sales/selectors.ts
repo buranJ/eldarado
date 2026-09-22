@@ -4,23 +4,28 @@ import type { Money, Sale, SaleStatus } from '@gamestock/domain';
 export interface SalesTotals {
   count: number;
   revenue: Money;
-  profit: Money;
-  averageRoi: number;
+  profit: Money | null;
+  averageRoi: number | null;
 }
 
-/** Refunded orders are excluded from money totals but still counted as records. */
-const isSettled = (sale: Sale): boolean => sale.status !== 'refunded';
+/** Only paid or payable orders contribute to financial totals. */
+const isSettled = (sale: Sale): boolean =>
+  sale.status === 'completed' || sale.status === 'pending_payout';
 
 export const salesTotals = (sales: Sale[]): SalesTotals => {
   const settled = sales.filter(isSettled);
+  const knownProfits = settled.flatMap((sale) => (sale.netProfit ? [sale.netProfit] : []));
+  const knownRoi = settled.flatMap((sale) =>
+    sale.roiPercent === null ? [] : [sale.roiPercent],
+  );
   return {
-    count: sales.length,
+    count: settled.length,
     revenue: sumMoney(settled.map((sale) => sale.salePrice)),
-    profit: sumMoney(settled.map((sale) => sale.netProfit)),
+    profit: knownProfits.length > 0 ? sumMoney(knownProfits) : null,
     averageRoi:
-      settled.length === 0
-        ? 0
-        : settled.reduce((acc, sale) => acc + sale.roiPercent, 0) / settled.length,
+      knownRoi.length > 0
+        ? knownRoi.reduce((acc, value) => acc + value, 0) / knownRoi.length
+        : null,
   };
 };
 

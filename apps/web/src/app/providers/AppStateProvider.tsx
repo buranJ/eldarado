@@ -4,7 +4,6 @@ import { AppStateContext } from './app-state-context';
 import type { AppStateApi } from './app-state-context';
 import { useToast } from './toast-context';
 import { api } from '@/api/client';
-import { SALES_FIXTURE } from '@/data/sales';
 import { DEFAULT_GAME_ID } from '@/config/games';
 import { DEFAULT_BASE_CURRENCY } from '@/config/app';
 import type { CurrencyCode, GameId, InventoryStatus } from '@gamestock/domain';
@@ -15,7 +14,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [gameId, setGameId] = useState<GameId>(DEFAULT_GAME_ID);
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(DEFAULT_BASE_CURRENCY);
   const [dataVersion, setDataVersion] = useState(0);
-  const [sales] = useState(() => SALES_FIXTURE);
 
   const notifyDataChanged = useCallback(() => setDataVersion((value) => value + 1), []);
 
@@ -147,7 +145,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       purchaseAccount,
       setManualPrice,
       setInventoryStatus,
-      sales: sales.filter((sale) => sale.gameId === gameId),
     }),
     [
       gameId,
@@ -161,7 +158,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       purchaseAccount,
       setManualPrice,
       setInventoryStatus,
-      sales,
     ],
   );
 

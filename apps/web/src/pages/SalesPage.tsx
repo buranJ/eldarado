@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Percent, Receipt, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowUpRight, Percent, Receipt, TrendingUp, Wallet } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { StatCard } from '@/components/StatCard';
@@ -12,20 +12,24 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { MarketplaceBadge } from '@/components/MarketplaceBadge';
 import { AccountCell } from '@/features/accounts/AccountCell';
 import { useAppState } from '@/app/providers/app-state-context';
-import { useSimulatedLoading } from '@/hooks/useSimulatedLoading';
+import { useQuery } from '@/hooks/useQuery';
 import { useTableSort } from '@/hooks/useTableSort';
 import type { SortAccessor } from '@/hooks/useTableSort';
 import { filterSales, salesTotals } from '@/features/sales/selectors';
 import { formatMoney } from '@/utils/money';
 import { formatDateTime } from '@/utils/date';
 import { formatNumber, formatPercent } from '@/utils/format';
+import { api } from '@/api/client';
 import type { Sale, SaleStatus } from '@gamestock/domain';
 
 type Period = 'all' | '30' | '90';
 
 export function SalesPage() {
   const state = useAppState();
-  const loading = useSimulatedLoading([state.gameId]);
+  const sales = useQuery(
+    () => api.eldoradoSales(state.gameId),
+    [state.gameId, state.dataVersion],
+  );
 
   const [search, setSearch] = useState('');
   const [period, setPeriod] = useState<Period>('all');
@@ -36,11 +40,11 @@ export function SalesPage() {
   const filtered = useMemo(
     () =>
       filterSales(
-        state.sales,
+        sales.data?.items ?? [],
         { query: search, periodDays: period === 'all' ? null : Number(period), status: statusFilter },
         now,
       ),
-    [state.sales, search, period, statusFilter, now],
+    [sales.data, search, period, statusFilter, now],
   );
 
   const totals = useMemo(() => salesTotals(filtered), [filtered]);
@@ -48,10 +52,10 @@ export function SalesPage() {
   const accessors: Record<string, SortAccessor<Sale>> = {
     id: (row) => row.id,
     account: (row) => row.accountId,
-    purchasePrice: (row) => row.purchasePrice.amount,
+    purchasePrice: (row) => row.purchasePrice?.amount ?? null,
     salePrice: (row) => row.salePrice.amount,
-    fees: (row) => row.fees.amount,
-    netProfit: (row) => row.netProfit.amount,
+    fees: (row) => row.fees?.amount ?? null,
+    netProfit: (row) => row.netProfit?.amount ?? null,
     roi: (row) => row.roiPercent,
     soldAt: (row) => new Date(row.soldAt).getTime(),
     status: (row) => row.status,
@@ -69,7 +73,18 @@ export function SalesPage() {
       width: 100,
       sortable: true,
       stickyLeft: 0,
-      render: (row) => <span className="num text-[12px] font-medium text-ink">{row.id}</span>,
+      render: (row) => (
+        <a
+          href={row.url ?? undefined}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="num inline-flex max-w-[88px] items-center gap-1 truncate text-[12px] font-medium text-ink transition-colors hover:text-accent"
+          title={row.id}
+        >
+          {row.id.slice(0, 8)}
+          <ArrowUpRight size={11} className="shrink-0" />
+        </a>
+      ),
     },
     {
       key: 'account',
@@ -120,9 +135,11 @@ export function SalesPage() {
       width: 116,
       sortable: true,
       render: (row) => (
-        <span className={row.netProfit.amount >= 0 ? 'num font-medium text-pos' : 'num font-medium text-neg'}>
-          {formatMoney(row.netProfit, { signed: true })}
-        </span>
+        row.netProfit ? (
+          <span className={row.netProfit.amount >= 0 ? 'num font-medium text-pos' : 'num font-medium text-neg'}>
+            {formatMoney(row.netProfit, { signed: true })}
+          </span>
+        ) : '—'
       ),
     },
     {
@@ -132,9 +149,11 @@ export function SalesPage() {
       width: 78,
       sortable: true,
       render: (row) => (
-        <span className={row.roiPercent >= 0 ? 'num text-pos' : 'num text-neg'}>
-          {formatPercent(row.roiPercent, { signed: true })}
-        </span>
+        row.roiPercent !== null ? (
+          <span className={row.roiPercent >= 0 ? 'num text-pos' : 'num text-neg'}>
+            {formatPercent(row.roiPercent, { signed: true })}
+          </span>
+        ) : '—'
       ),
     },
     {
@@ -157,7 +176,7 @@ export function SalesPage() {
     <div className="space-y-4">
       <PageHeader
         title="Продажи"
-        subtitle="История завершённых сделок на площадках продажи"
+        subtitle="История заказов из подключённого аккаунта Eldorado"
         actions={
           <>
             <Select
@@ -178,6 +197,7 @@ export function SalesPage() {
                 { value: 'all', label: 'Все статусы' },
                 { value: 'completed', label: 'Завершена' },
                 { value: 'pending_payout', label: 'Ожидает выплаты' },
+                { value: 'canceled', label: 'Отменён' },
                 { value: 'refunded', label: 'Возврат' },
                 { value: 'disputed', label: 'Спор' },
               ]}
@@ -192,7 +212,7 @@ export function SalesPage() {
         }
       />
 
-      {loading ? (
+      {sales.loading ? (
         <CardsSkeleton count={4} columns={4} />
       ) : (
         <div className="grid grid-cols-4 gap-3">
@@ -215,17 +235,22 @@ export function SalesPage() {
           rowKey={(row) => row.id}
           sort={sort}
           onSortToggle={toggle}
-          loading={loading}
+          loading={sales.loading}
           minWidth={1256}
           empty={
             <EmptyState
               icon={Receipt}
               title="Продаж не найдено"
-              description="За выбранный период завершённых сделок нет."
+              description={sales.error ?? 'За выбранный период заказов нет.'}
             />
           }
         />
       </Panel>
+
+      <p className="text-[11px] text-ink-4">
+        Для заказов, созданных вручную вне GameStock, цена закупки, комиссия, прибыль и ROI
+        неизвестны и отмечены прочерком.
+      </p>
     </div>
   );
 }

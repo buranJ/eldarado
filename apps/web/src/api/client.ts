@@ -5,6 +5,7 @@ import type {
   InventoryStatus,
   MarketplaceListing,
   Money,
+  Sale,
 } from '@gamestock/domain';
 
 /** Requests go through the Vite dev proxy, so no host is needed. */
@@ -233,6 +234,10 @@ export const api = {
   eldoradoListings: () =>
     request<{ items: MarketplaceListing[]; total: number; remoteError: string | null }>(
       '/destinations/eldorado/listings',
+    ),
+  eldoradoSales: (gameId: string) =>
+    request<{ items: Sale[]; total: number }>(
+      `/destinations/eldorado/sales?gameId=${encodeURIComponent(gameId)}`,
     ),
   publishToEldorado: (id: string, input: EldoradoPublishInput) =>
     request<EldoradoPublishResult>(`/inventory/${id}/eldorado/publish`, {
