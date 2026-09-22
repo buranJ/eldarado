@@ -1,7 +1,6 @@
 import { RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Checkbox, FilterField, SearchInput, Select, TextInput } from '@/components/ui/Field';
-import { GAMES } from '@/config/games';
 import { sourceMarketplaces } from '@/config/marketplaces';
 import { isFiltersDirty } from './marketplace-filters';
 import type { MarketplaceFilterState, PipelineFilter } from './marketplace-filters';
@@ -33,7 +32,7 @@ export function MarketplaceFilters({
           <SearchInput
             value={filters.search}
             onChange={(event) => onChange({ search: event.target.value })}
-            placeholder="Поиск по ID, названию, продавцу"
+            placeholder="ID, название или продавец"
             className="w-[280px]"
           />
           <Button
@@ -48,23 +47,8 @@ export function MarketplaceFilters({
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(6,minmax(0,1fr))] gap-x-3 gap-y-3 px-4 py-3">
-        <FilterField label="Игра">
-          <Select
-            value={filters.gameId}
-            onChange={(event) => onChange({ gameId: event.target.value })}
-            options={[
-              { value: 'all', label: 'Все игры' },
-              ...GAMES.map((game) => ({
-                value: game.id,
-                label: game.name,
-                disabled: game.status !== 'active',
-              })),
-            ]}
-          />
-        </FilterField>
-
-        <FilterField label="Маркетплейс">
+      <div className="grid grid-cols-[minmax(160px,1fr)_minmax(240px,1.4fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto] items-end gap-3 px-4 py-3">
+        <FilterField label="Источник">
           <Select
             value={filters.marketplace}
             onChange={(event) => onChange({ marketplace: event.target.value })}
@@ -75,7 +59,7 @@ export function MarketplaceFilters({
           />
         </FilterField>
 
-        <FilterField label="Цена, $">
+        <FilterField label="Цена">
           <div className="flex items-center gap-1.5">
             <TextInput
               type="number"
@@ -95,90 +79,35 @@ export function MarketplaceFilters({
           </div>
         </FilterField>
 
-        <FilterField label="Трофеи от">
-          <TextInput
-            type="number"
-            min={0}
-            value={filters.trophiesMin}
-            onChange={(event) => onChange({ trophiesMin: event.target.value })}
-            placeholder="0"
-          />
-        </FilterField>
-
-        <FilterField label="Уровень от">
-          <TextInput
-            type="number"
-            min={0}
-            value={filters.levelMin}
-            title="Атрибут «уровень» со страницы источника"
-            onChange={(event) => onChange({ levelMin: event.target.value })}
-            placeholder="0"
-          />
-        </FilterField>
-
-        <FilterField label="Карт от">
-          <TextInput
-            type="number"
-            min={0}
-            value={filters.cardsMin}
-            onChange={(event) => onChange({ cardsMin: event.target.value })}
-            placeholder="0"
-          />
-        </FilterField>
-
-        <FilterField label="Эволюции от">
-          <TextInput
-            type="number"
-            min={0}
-            disabled
-            value={filters.evolutionsMin}
-            title="Появится после подключения AI-анализа — эволюций нет в атрибутах источника"
-            onChange={(event) => onChange({ evolutionsMin: event.target.value })}
-            placeholder="—"
-          />
-        </FilterField>
-
-        <FilterField label="Герои от">
-          <TextInput
-            type="number"
-            min={0}
-            disabled
-            value={filters.heroesMin}
-            title="Появится после подключения AI-анализа — героев нет в атрибутах источника"
-            onChange={(event) => onChange({ heroesMin: event.target.value })}
-            placeholder="—"
-          />
-        </FilterField>
-
-        <FilterField label="Рейтинг продавца">
+        <FilterField label="Продавец">
           <Select
             value={filters.sellerRatingMin}
             onChange={(event) => onChange({ sellerRatingMin: event.target.value })}
             options={[
-              { value: 'all', label: 'Любой' },
-              { value: '4.8', label: 'от 4,8' },
-              { value: '4.5', label: 'от 4,5' },
-              { value: '4.0', label: 'от 4,0' },
-              { value: '3.0', label: 'от 3,0' },
+              { value: 'all', label: 'Любой рейтинг' },
+              { value: '4.8', label: '4,8 и выше' },
+              { value: '4.5', label: '4,5 и выше' },
+              { value: '4.0', label: '4,0 и выше' },
+              { value: '3.0', label: '3,0 и выше' },
             ]}
           />
         </FilterField>
 
-        <FilterField label="Этап пайплайна">
+        <FilterField label="Результат проверки">
           <Select
             value={filters.pipeline}
             onChange={(event) => onChange({ pipeline: event.target.value as PipelineFilter })}
             options={[
-              { value: 'all', label: 'Все' },
-              { value: 'ready_for_analysis', label: 'Прошли предфильтр' },
-              { value: 'prefiltered_out', label: 'Отсеяны фильтром' },
+              { value: 'all', label: 'Все объявления' },
+              { value: 'ready_for_analysis', label: 'Подходят' },
+              { value: 'prefiltered_out', label: 'Не подходят' },
             ]}
           />
         </FilterField>
 
-        <div className="col-span-3 flex items-end pb-1">
+        <div className="flex h-7 items-center whitespace-nowrap pb-px">
           <Checkbox
-            label="Только с автовыдачей"
+            label="Есть автовыдача"
             checked={filters.autoDeliveryOnly}
             onChange={(checked) => onChange({ autoDeliveryOnly: checked })}
           />
