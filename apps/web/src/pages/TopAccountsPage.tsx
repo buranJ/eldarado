@@ -172,13 +172,13 @@ export function TopAccountsPage() {
     {
       key: 'actions',
       header: '',
-      width: 128,
+      width: 148,
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
           <IconButton
             icon={Eye}
-            size="xs"
+            size="sm"
             variant="subtle"
             title="Подробнее"
             aria-label="Подробнее"
@@ -186,7 +186,7 @@ export function TopAccountsPage() {
           />
           <IconButton
             icon={Check}
-            size="xs"
+            size="sm"
             variant="success"
             title="Одобрить"
             aria-label="Одобрить"
@@ -195,7 +195,7 @@ export function TopAccountsPage() {
           />
           <IconButton
             icon={X}
-            size="xs"
+            size="sm"
             variant="danger"
             title="Отклонить"
             aria-label="Отклонить"
@@ -204,7 +204,7 @@ export function TopAccountsPage() {
           />
           <IconButton
             icon={ShoppingCart}
-            size="xs"
+            size="sm"
             variant="default"
             title="Купить"
             aria-label="Купить"
@@ -262,7 +262,7 @@ export function TopAccountsPage() {
           onRowClick={(row) => setDrawerAccount(row)}
           selectedKey={drawerAccount?.id ?? null}
           loading={qualified.loading}
-          minWidth={1040}
+          minWidth={1060}
           empty={
             <EmptyState
               icon={Trophy}
