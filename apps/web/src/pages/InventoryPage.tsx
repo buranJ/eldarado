@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, Boxes, ExternalLink, MoreHorizontal, Upload } from 'lucide-react';
 import { PageHeader, MetaItem } from '@/components/PageHeader';
 import { Panel } from '@/components/ui/Panel';
+import { Tabs } from '@/components/ui/Tabs';
+import type { TabItem } from '@/components/ui/Tabs';
 import { Button, IconButton } from '@/components/ui/Button';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
-import { SearchInput, Select } from '@/components/ui/Field';
+import { SearchInput } from '@/components/ui/Field';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
 import { EmptyState } from '@/components/EmptyState';
@@ -23,9 +25,7 @@ import type { InventoryItemDto } from '@/api/client';
 import { formatMoney, money } from '@/utils/money';
 import { formatDateTime } from '@/utils/date';
 import { formatNumber } from '@/utils/format';
-import type { InventoryStatus } from '@gamestock/domain';
-
-type StatusFilter = 'all' | InventoryStatus;
+type InventoryTab = 'new' | 'published' | 'sold';
 
 const canPublish = (item: InventoryItemDto): boolean =>
   ['purchased', 'ready_to_list', 'preparing'].includes(item.status);
@@ -33,24 +33,45 @@ const canPublish = (item: InventoryItemDto): boolean =>
 export function InventoryPage() {
   const state = useAppState();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [tab, setTab] = useState<InventoryTab>('new');
   const [publishTarget, setPublishTarget] = useState<InventoryItemDto | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [bulkItems, setBulkItems] = useState<InventoryItemDto[] | null>(null);
 
   const inventory = useQuery(
-    () => api.inventory(state.gameId, statusFilter === 'all' ? undefined : statusFilter),
-    [state.gameId, statusFilter, state.dataVersion],
+    () => api.inventory(state.gameId),
+    [state.gameId, state.dataVersion],
   );
+
+  const allItems = useMemo(() => inventory.data?.items ?? [], [inventory.data]);
+  const counts = useMemo(
+    () => ({
+      new: allItems.filter((item) => canPublish(item) || item.status === 'reserved').length,
+      published: allItems.filter((item) => item.status === 'listed').length,
+      sold: allItems.filter((item) => item.status === 'sold').length,
+    }),
+    [allItems],
+  );
+  const tabs: TabItem<InventoryTab>[] = [
+    { value: 'new', label: 'Новые', count: counts.new },
+    { value: 'published', label: 'Опубликованные', count: counts.published },
+    { value: 'sold', label: 'Проданные', count: counts.sold },
+  ];
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const items = inventory.data?.items ?? [];
-    if (!query) return items;
-    return items.filter((item) =>
-      `${item.accountId} ${item.title}`.toLowerCase().includes(query),
-    );
-  }, [inventory.data, search]);
+    return allItems.filter((item) => {
+      const inTab =
+        tab === 'new'
+          ? canPublish(item) || item.status === 'reserved'
+          : tab === 'published'
+            ? item.status === 'listed'
+            : item.status === 'sold';
+      if (!inTab) return false;
+      if (!query) return true;
+      return `${item.accountId} ${item.title}`.toLowerCase().includes(query);
+    });
+  }, [allItems, search, tab]);
 
   const capital = inventory.data ? inventory.data.capitalMinor / 100 : 0;
   const revenue = inventory.data ? inventory.data.expectedRevenueMinor / 100 : 0;
@@ -270,28 +291,12 @@ export function InventoryPage() {
           </>
         }
         actions={
-          <>
-            <Select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-              className="w-[190px]"
-              options={[
-                { value: 'all', label: 'Все статусы' },
-                { value: 'purchased', label: 'Куплен' },
-                { value: 'preparing', label: 'Подготовка' },
-                { value: 'ready_to_list', label: 'Готов к публикации' },
-                { value: 'listed', label: 'Опубликован' },
-                { value: 'reserved', label: 'Зарезервирован' },
-                { value: 'sold', label: 'Продан' },
-              ]}
-            />
-            <SearchInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Поиск по инвентарю"
-              className="w-[220px]"
-            />
-          </>
+          <SearchInput
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Поиск по инвентарю"
+            className="w-[260px]"
+          />
         }
       />
 
@@ -332,6 +337,14 @@ export function InventoryPage() {
         </Panel>
       ) : (
         <Panel className="overflow-hidden">
+          <Tabs
+            items={tabs}
+            value={tab}
+            onChange={(value) => {
+              setTab(value);
+              setSelectedIds(new Set());
+            }}
+          />
           <DataTable
             columns={columns}
             rows={rows}
@@ -341,8 +354,20 @@ export function InventoryPage() {
             empty={
               <EmptyState
                 icon={Boxes}
-                title="Инвентарь пуст"
-                description="Аккаунты попадают сюда сразу после одобрения или подтверждения покупки в разделе «Топ аккаунтов»."
+                title={
+                  tab === 'new'
+                    ? 'Новых аккаунтов нет'
+                    : tab === 'published'
+                      ? 'Опубликованных аккаунтов нет'
+                      : 'Проданных аккаунтов нет'
+                }
+                description={
+                  tab === 'new'
+                    ? 'Новые аккаунты появятся здесь после одобрения в разделе «Топ аккаунтов».'
+                    : tab === 'published'
+                      ? 'После публикации на Eldorado аккаунты появятся в этой вкладке.'
+                      : 'Здесь появятся завершённые продажи.'
+                }
               />
             }
           />
