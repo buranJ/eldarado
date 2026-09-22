@@ -24,6 +24,20 @@ const fileToDataUrl = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
+const createTemporaryCredentials = (accountId: string) => {
+  const accountPart = accountId
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 24) || 'account';
+  const timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
+  const randomPart = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+  return {
+    login: `pending-${accountPart}-${timestamp}`,
+    password: `Pending!${accountPart}-${timestamp}-${randomPart}`,
+  };
+};
+
 function FormField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block space-y-1">
@@ -54,8 +68,9 @@ export function EldoradoPublishModal({
   const [priceUsd, setPriceUsd] = useState(() => toBase(salePrice, 'USD').amount.toFixed(2));
   const [originalEmail, setOriginalEmail] = useState('yes');
   const [image, setImage] = useState<File | null>(null);
-  const [accountLogin, setAccountLogin] = useState('');
-  const [accountPassword, setAccountPassword] = useState('');
+  const [temporaryCredentials] = useState(() => createTemporaryCredentials(item.accountId));
+  const [accountLogin, setAccountLogin] = useState(temporaryCredentials.login);
+  const [accountPassword, setAccountPassword] = useState(temporaryCredentials.password);
   const [emailProviderUrl, setEmailProviderUrl] = useState('');
   const [emailLogin, setEmailLogin] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
@@ -181,13 +196,16 @@ export function EldoradoPublishModal({
       <div className="max-h-[68vh] space-y-4 overflow-y-auto pr-1">
         {result ? (
           <div className="rounded-lg border border-[#285b35] bg-[#13251a] p-4 text-[12px] text-pos">
-            Лот создан. Реквизиты переданы Eldorado и не сохранены в базе GameStock.
+            Лот создан с временными реквизитами. Откройте его в Eldorado и замените логин и
+            пароль настоящими до завершения проверки. Реквизиты не сохранены в базе GameStock.
           </div>
         ) : (
           <>
             <div className="rounded-lg border border-[#594b25] bg-[#251f12] p-3 text-[11.5px] leading-relaxed text-[#e1ca82]">
               Используйте только реальный аккаунт, которым вы владеете. Логины и пароли
-              отправятся напрямую в Eldorado для автоматической доставки и не записываются в GameStock.
+              отправятся напрямую в Eldorado для автоматической доставки и не записываются в
+              GameStock. Сейчас подставлены временные реквизиты — замените их настоящими в
+              Eldorado до завершения 24-часовой проверки лота.
             </div>
 
             <div className="grid grid-cols-[1fr_150px] gap-3">
@@ -250,10 +268,10 @@ export function EldoradoPublishModal({
             <div className="border-t border-line pt-4">
               <h3 className="mb-3 text-[12px] font-semibold text-ink">Реквизиты игрового аккаунта</h3>
               <div className="grid grid-cols-2 gap-3">
-                <FormField label="Логин аккаунта">
+                <FormField label="Временный логин аккаунта">
                   <TextInput value={accountLogin} onChange={(e) => setAccountLogin(e.target.value)} />
                 </FormField>
-                <FormField label="Пароль аккаунта">
+                <FormField label="Временный пароль аккаунта">
                   <TextInput
                     type="password"
                     autoComplete="new-password"
@@ -262,6 +280,10 @@ export function EldoradoPublishModal({
                   />
                 </FormField>
               </div>
+              <p className="mt-2 text-[10.5px] leading-relaxed text-ink-3">
+                Сформированы из ID аккаунта и времени публикации. Можно изменить перед отправкой;
+                после публикации обязательно замените их настоящими в Eldorado.
+              </p>
             </div>
 
             <div className="border-t border-line pt-4">
