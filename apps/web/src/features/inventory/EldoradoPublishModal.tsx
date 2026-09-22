@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { FieldLabel, Select, TextInput } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { toBase } from '@/utils/money';
+import { createTemporaryCredentials } from './temporary-credentials';
 
 const textareaClass =
   'w-full rounded-md border border-line-2 bg-panel-2 px-2 py-1.5 text-[12px] text-ink placeholder:text-ink-4 focus:border-accent focus:outline-none';
@@ -23,20 +24,6 @@ const fileToDataUrl = (file: File): Promise<string> =>
     reader.onerror = () => reject(new Error('Не удалось прочитать изображение'));
     reader.readAsDataURL(file);
   });
-
-const createTemporaryCredentials = (accountId: string) => {
-  const accountPart = accountId
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 24) || 'account';
-  const timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
-  const randomPart = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
-  return {
-    login: `pending-${accountPart}-${timestamp}@gmail.com`,
-    password: `Pending!${accountPart}-${timestamp}-${randomPart}`,
-  };
-};
 
 function FormField({ label, children }: { label: string; children: ReactNode }) {
   return (

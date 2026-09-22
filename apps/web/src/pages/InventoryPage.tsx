@@ -14,6 +14,7 @@ import { ScoreBadge } from '@/components/ScoreBadge';
 import { AccountCell } from '@/features/accounts/AccountCell';
 import { PriceEditor } from '@/features/inventory/PriceEditor';
 import { EldoradoPublishModal } from '@/features/inventory/EldoradoPublishModal';
+import { EldoradoBulkPublishModal } from '@/features/inventory/EldoradoBulkPublishModal';
 import { focusPriceInput } from '@/features/inventory/price-input';
 import { useAppState } from '@/app/providers/app-state-context';
 import { useQuery } from '@/hooks/useQuery';
@@ -26,11 +27,16 @@ import type { InventoryStatus } from '@gamestock/domain';
 
 type StatusFilter = 'all' | InventoryStatus;
 
+const canPublish = (item: InventoryItemDto): boolean =>
+  ['purchased', 'ready_to_list', 'preparing'].includes(item.status);
+
 export function InventoryPage() {
   const state = useAppState();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [publishTarget, setPublishTarget] = useState<InventoryItemDto | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkItems, setBulkItems] = useState<InventoryItemDto[] | null>(null);
 
   const inventory = useQuery(
     () => api.inventory(state.gameId, statusFilter === 'all' ? undefined : statusFilter),
@@ -49,13 +55,62 @@ export function InventoryPage() {
   const capital = inventory.data ? inventory.data.capitalMinor / 100 : 0;
   const revenue = inventory.data ? inventory.data.expectedRevenueMinor / 100 : 0;
   const currency = rows[0]?.purchase.price.currency ?? 'RUB';
+  const selectableIds = rows.filter(canPublish).map((item) => item.id);
+  const selectedItems = rows.filter((item) => selectedIds.has(item.id) && canPublish(item));
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allSelected) selectableIds.forEach((id) => next.delete(id));
+      else selectableIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
 
   const columns: Column<InventoryItemDto>[] = [
+    {
+      key: 'select',
+      header: (
+        <input
+          type="checkbox"
+          checked={allSelected}
+          aria-label="Выбрать все готовые аккаунты"
+          onClick={(event) => event.stopPropagation()}
+          onChange={toggleAll}
+          className="size-3.5 cursor-pointer accent-[#6e8bff]"
+        />
+      ),
+      width: 42,
+      align: 'center',
+      stickyLeft: 0,
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(row.id)}
+          disabled={!canPublish(row)}
+          aria-label={`Выбрать аккаунт ${row.accountId}`}
+          onClick={(event) => event.stopPropagation()}
+          onChange={() => toggleSelected(row.id)}
+          className="size-3.5 cursor-pointer accent-[#6e8bff] disabled:cursor-not-allowed disabled:opacity-30"
+        />
+      ),
+    },
     {
       key: 'account',
       header: 'Аккаунт',
       width: 296,
-      stickyLeft: 0,
+      stickyLeft: 42,
       stickyEdge: true,
       render: (row) => <AccountCell id={row.accountId} title={row.title} gameId={row.gameId} />,
     },
@@ -178,7 +233,7 @@ export function InventoryPage() {
                 icon: Upload,
                 tone: 'success',
                 separatorBefore: true,
-                disabled: !['purchased', 'ready_to_list', 'preparing'].includes(row.status),
+                disabled: !canPublish(row),
                 onSelect: () => setPublishTarget(row),
               },
               {
@@ -240,6 +295,28 @@ export function InventoryPage() {
         }
       />
 
+      {selectedItems.length > 0 ? (
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-line-2 bg-panel px-4 py-2.5">
+          <span className="text-[12.5px] text-ink-2">
+            Выбрано для публикации:{' '}
+            <span className="num font-semibold text-ink">{selectedItems.length}</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="md"
+              variant="success"
+              icon={Upload}
+              onClick={() => setBulkItems(selectedItems)}
+            >
+              Опубликовать на Eldorado
+            </Button>
+            <Button size="md" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+              Снять выбор
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {inventory.error ? (
         <Panel>
           <EmptyState
@@ -260,7 +337,7 @@ export function InventoryPage() {
             rows={rows}
             rowKey={(row) => row.id}
             loading={inventory.loading}
-            minWidth={1330}
+            minWidth={1372}
             empty={
               <EmptyState
                 icon={Boxes}
@@ -282,6 +359,17 @@ export function InventoryPage() {
           item={publishTarget}
           onClose={() => setPublishTarget(null)}
           onPublished={() => state.notifyDataChanged()}
+        />
+      ) : null}
+
+      {bulkItems ? (
+        <EldoradoBulkPublishModal
+          items={bulkItems}
+          onClose={() => setBulkItems(null)}
+          onFinished={() => {
+            setSelectedIds(new Set());
+            state.notifyDataChanged();
+          }}
         />
       ) : null}
     </div>
