@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { CurrencyCode } from '@gamestock/domain';
 import type { RawOffer } from '../types.js';
+import { translateClashRoyaleTitle } from '../../../localization/clash-royale.js';
 import { FUNPAY_BASE } from './config.js';
 
 const CURRENCY_BY_SYMBOL: Record<string, CurrencyCode> = {
@@ -77,7 +78,7 @@ export const stripAutoSuffix = (
 };
 
 /** Parses a FunPay category page into raw offers. */
-export const parseCategory = (html: string): RawOffer[] => {
+export const parseCategory = (html: string, gameId?: string): RawOffer[] => {
   const $ = cheerio.load(html);
   const offers: RawOffer[] = [];
 
@@ -113,11 +114,17 @@ export const parseCategory = (html: string): RawOffer[] => {
 
     if (!sellerExternalId) return;
 
+    const sellerTitle = stripAutoSuffix(rawTitle, attrs);
+    const localizedGameData =
+      gameId === 'clash-royale'
+        ? { titleEn: translateClashRoyaleTitle(sellerTitle) }
+        : {};
+
     offers.push({
       externalId,
       url: `${FUNPAY_BASE}/lots/offer?id=${externalId}`,
       rawTitle,
-      sellerTitle: stripAutoSuffix(rawTitle, attrs),
+      sellerTitle,
       price,
       autoDelivery: node.attr('data-auto') === '1',
       seller: {
@@ -140,6 +147,7 @@ export const parseCategory = (html: string): RawOffer[] => {
           attrs.namechange === undefined
             ? null
             : /да|есть/i.test(attrs.namechange),
+        ...localizedGameData,
       },
     });
   });

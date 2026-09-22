@@ -2,6 +2,8 @@ import type { ListingDraft } from './types.js';
 
 export interface DraftSource {
   gameName: string;
+  /** Localized seller-written summary; the source text remains untouched. */
+  sellerSummary?: string | null;
   sellMinor: number;
   currency: string;
   attributes: Record<string, number | boolean | string | null>;
@@ -62,7 +64,11 @@ export const buildDraft = (source: DraftSource): ListingDraft => {
     return value === null ? null : render(value);
   }).filter((part): part is string => part !== null);
 
-  const title = [source.gameName, ...headline].join(' | ').slice(0, 120);
+  const sellerSummary = source.sellerSummary?.trim() || null;
+  const titleParts = headline.length
+    ? [source.gameName, ...headline]
+    : [source.gameName, sellerSummary];
+  const title = titleParts.filter((part): part is string => Boolean(part)).join(' | ').slice(0, 120);
 
   const details = DETAIL_ROWS.map(({ key, label }) => {
     const value = num(attrs, key);
@@ -87,6 +93,7 @@ export const buildDraft = (source: DraftSource): ListingDraft => {
 
   const sections = [
     `${source.gameName} account for sale.`,
+    ...(sellerSummary ? ['', 'SELLER DETAILS', `• ${sellerSummary}`] : []),
     '',
     'ACCOUNT DETAILS',
     ...(details.length ? details : ['• Details available on request']),

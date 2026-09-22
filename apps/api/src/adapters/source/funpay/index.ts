@@ -78,7 +78,7 @@ export const funPayAdapter: SourceAdapter = {
     const category = FUNPAY_CATEGORIES[gameId];
     if (!category) throw new Error(`FunPay: категория для игры ${gameId} не настроена`);
     const html = await fetchPath(`/lots/${category.lotId}/`);
-    return selectNewestOffers(parseCategory(html), FUNPAY_COLLECTION_LIMIT);
+    return selectNewestOffers(parseCategory(html, gameId), FUNPAY_COLLECTION_LIMIT);
   },
 
   async loadImages(externalId, limit = 4): Promise<SourceImage[]> {

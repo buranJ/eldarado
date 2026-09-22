@@ -13,6 +13,7 @@ import { ExtractionSchema, toAttributeMap } from '../analysis/schema.js';
 import { prisma } from '../lib/db.js';
 import { sourceImagePath } from '../lib/source-images.js';
 import { convertMinor, DESTINATION_FEE_RATE } from '../config/marketplaces.js';
+import { translateClashRoyaleTitle } from '../localization/clash-royale.js';
 
 const optionalField = (max: number) => z.string().max(max).optional();
 
@@ -93,9 +94,23 @@ const internalGameId = (eldoradoGameId: string): string =>
 
 const draftFor = (item: InventoryItem) => {
   const parsed = ExtractionSchema.safeParse(item.listing.analysis?.extracted);
-  const attributes = parsed.success ? toAttributeMap(parsed.data) : {};
+  const sourceAttributes =
+    typeof item.listing.gameData === 'object' && item.listing.gameData !== null
+      ? (item.listing.gameData as Record<string, number | boolean | string | null>)
+      : {};
+  const attributes = {
+    ...sourceAttributes,
+    ...(parsed.success ? toAttributeMap(parsed.data) : {}),
+  };
+  const storedTitle =
+    typeof sourceAttributes.titleEn === 'string' ? sourceAttributes.titleEn.trim() : '';
+  const sellerSummary =
+    item.gameId === 'clash-royale'
+      ? storedTitle || translateClashRoyaleTitle(item.listing.sellerTitle)
+      : null;
   return buildDraft({
     gameName: item.gameId === 'clash-royale' ? 'Clash Royale' : item.gameId,
+    sellerSummary,
     sellMinor: item.manualMinor ?? item.recommendedMinor,
     currency: item.purchaseCurrency,
     attributes,
