@@ -1,4 +1,3 @@
-import { env } from '../../../lib/env.js';
 import type {
   EldoradoAccountOfferPayload,
   EldoradoOfferImage,
@@ -30,6 +29,11 @@ export interface EldoradoAccountGame {
   gameId: string;
   gameName: string;
   seoAlias: string;
+}
+
+export interface EldoradoCredentials {
+  clientId: string;
+  clientSecret: string;
 }
 
 export interface EldoradoSellerOrder {
@@ -85,14 +89,16 @@ export class EldoradoClient {
   private token: { value: string; expiresAt: number } | null = null;
   private accountGamesPromise: Promise<EldoradoAccountGame[]> | null = null;
 
+  constructor(private readonly credentials: EldoradoCredentials | null) {}
+
   get configured(): boolean {
-    return env.eldoradoClientId !== null && env.eldoradoClientSecret !== null;
+    return this.credentials !== null;
   }
 
   private async accessToken(): Promise<string> {
     if (!this.configured) {
       throw new EldoradoApiError(
-        'Не заданы ELDORADO_CLIENT_ID и ELDORADO_CLIENT_SECRET в apps/api/.env',
+        'В профиле не настроены ключи Eldorado',
         503,
       );
     }
@@ -105,8 +111,8 @@ export class EldoradoClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
-        ClientId: env.eldoradoClientId,
-        ClientSecret: env.eldoradoClientSecret,
+        ClientId: this.credentials!.clientId,
+        ClientSecret: this.credentials!.clientSecret,
       }),
     });
     if (!response.ok) throw new EldoradoApiError(await errorMessage(response), response.status);
@@ -399,5 +405,3 @@ export class EldoradoClient {
     );
   }
 }
-
-export const eldoradoClient = new EldoradoClient();

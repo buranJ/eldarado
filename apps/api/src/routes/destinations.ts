@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { EldoradoApiError, eldoradoClient } from '../adapters/destination/eldorado/client.js';
+import { EldoradoApiError } from '../adapters/destination/eldorado/client.js';
+import { eldoradoClientForUser } from '../adapters/destination/eldorado/user-client.js';
 import {
   buildAccountOfferPayload,
   ELDORADO_ACCOUNT_GAMES,
@@ -139,12 +140,16 @@ const parseImage = (dataUrl: string): { bytes: Buffer; mimeType: string } => {
 };
 
 export const registerDestinationRoutes = (app: FastifyInstance): void => {
-  app.get('/api/destinations/eldorado/status', async () => ({
-    configured: eldoradoClient.configured,
-    mode: eldoradoClient.configured ? 'ready_to_publish' : 'not_configured',
-  }));
+  app.get('/api/destinations/eldorado/status', async (request) => {
+    const client = await eldoradoClientForUser(request.user!.id);
+    return {
+      configured: client.configured,
+      mode: client.configured ? 'ready_to_publish' : 'not_configured',
+    };
+  });
 
-  app.get('/api/destinations/eldorado/listings', async () => {
+  app.get('/api/destinations/eldorado/listings', async (request) => {
+    const eldoradoClient = await eldoradoClientForUser(request.user!.id);
     const rows = await prisma.marketplaceListing.findMany({
       where: { marketplace: 'eldorado' },
       include: { item: { include: { listing: true } } },
@@ -239,6 +244,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
   app.get('/api/destinations/eldorado/sales', async (request, reply) => {
     const query = z.object({ gameId: z.string().optional() }).parse(request.query ?? {});
     try {
+      const eldoradoClient = await eldoradoClientForUser(request.user!.id);
       const orders = (await eldoradoClient.listSellerOrders()).filter(
         (order) => order.category.toLowerCase() === 'account',
       );
@@ -313,8 +319,9 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
    * A deliberate read-only verification endpoint. Creation and other mutations
    * will live in separate routes so a status check can never publish an offer.
    */
-  app.get('/api/destinations/eldorado/offers', async (_request, reply) => {
+  app.get('/api/destinations/eldorado/offers', async (request, reply) => {
     try {
+      const eldoradoClient = await eldoradoClientForUser(request.user!.id);
       const offers = await eldoradoClient.listOffers();
       return { offers, total: offers.length };
     } catch (error) {
@@ -327,6 +334,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
   app.delete('/api/destinations/eldorado/offers/:offerId', async (request, reply) => {
     const { offerId } = request.params as { offerId: string };
     try {
+      const eldoradoClient = await eldoradoClientForUser(request.user!.id);
       await eldoradoClient.deleteAccountOffer(offerId);
       return { deleted: true, offerId };
     } catch (error) {
@@ -383,6 +391,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       }
 
       try {
+        const eldoradoClient = await eldoradoClientForUser(request.user!.id);
         const storedImages = item.listing.images.slice(0, 4);
         const imageInputs = await Promise.all(
           storedImages.map(async (image) => ({
@@ -491,6 +500,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
     }
 
     try {
+      const eldoradoClient = await eldoradoClientForUser(request.user!.id);
       await eldoradoClient.deleteAccountOffer(listing.externalId);
       await prisma.$transaction(async (tx) => {
         await tx.marketplaceListing.update({

@@ -10,16 +10,41 @@ import { registerInventoryRoutes } from './routes/inventory.js';
 import { registerOverviewRoutes } from './routes/overview.js';
 import { registerDestinationRoutes } from './routes/destinations.js';
 import { startScheduler } from './scheduler.js';
+import { sessionUser } from './auth/session.js';
+import { registerAuthRoutes } from './routes/auth.js';
+import { registerIntegrationRoutes } from './routes/integrations.js';
+import './auth/types.js';
 
 const app = Fastify({ logger: { transport: { target: 'pino-pretty' } } });
 
-await app.register(cors, { origin: true });
+await app.register(cors, { origin: env.appOrigin, credentials: true });
+
+app.decorateRequest('user', null);
+app.addHook('onRequest', async (request, reply) => {
+  request.user = await sessionUser(request);
+  const publicPath =
+    request.url === '/api/health' ||
+    request.url === '/api/auth/login' ||
+    request.url === '/api/auth/register';
+  if (!publicPath && !request.user) {
+    return reply.code(401).send({ error: 'Требуется вход в профиль' });
+  }
+  if (
+    !['GET', 'HEAD', 'OPTIONS'].includes(request.method) &&
+    request.headers.origin &&
+    request.headers.origin !== env.appOrigin
+  ) {
+    return reply.code(403).send({ error: 'Источник запроса не разрешён' });
+  }
+});
 
 app.get('/api/health', async () => {
   await prisma.$queryRaw`SELECT 1`;
   return { ok: true, aiConfigured: env.anthropicApiKey !== null };
 });
 
+registerAuthRoutes(app);
+registerIntegrationRoutes(app);
 registerListingRoutes(app);
 const scheduler = await startScheduler((message) => app.log.info(message));
 registerSyncRoutes(app, scheduler);
@@ -38,4 +63,4 @@ const shutdown = async (): Promise<void> => {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-await app.listen({ port: env.port, host: '127.0.0.1' });
+await app.listen({ port: env.port, host: env.host });

@@ -20,6 +20,8 @@ export interface AnalyseOptions {
   concurrency?: number;
   /** Report what would run without calling the model or writing anything. */
   dryRun?: boolean;
+  /** User-owned model key. CLI runs may omit it and use the legacy environment key. */
+  apiKey?: string;
   onProgress?: (done: number, total: number) => void;
 }
 
@@ -147,13 +149,14 @@ const analyseOne = async (
   listing: Candidate,
   market: MarketModel,
   gameId: string,
+  apiKey?: string,
 ): Promise<import('./extract.js').ExtractionUsage> => {
   const sourceAttrs = (listing.gameData ?? {}) as Record<string, number | boolean | null>;
 
   const { extraction, usage } = await extractAttributes({
     title: listing.sellerTitle,
     sourceAttrs,
-  });
+  }, apiKey);
 
   const attrs = mergeAttributes(extraction, sourceAttrs);
   const quality = scoreQuality(gameId, attrs);
@@ -308,7 +311,7 @@ export const analyse = async (options: AnalyseOptions = {}): Promise<AnalyseRepo
   let done = 0;
   await pool(pending, options.concurrency ?? 6, async (listing) => {
     try {
-      const usage = await analyseOne(listing, market, gameId);
+      const usage = await analyseOne(listing, market, gameId, options.apiKey);
       report.analysed += 1;
       report.inputTokens += usage.inputTokens;
       report.outputTokens += usage.outputTokens;

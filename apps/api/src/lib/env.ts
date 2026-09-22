@@ -12,6 +12,10 @@ const optional = (name: string): string | null => process.env[name]?.trim() || n
 export const env = {
   databaseUrl: required('DATABASE_URL'),
   port: Number(process.env.PORT ?? 3001),
+  host: optional('HOST') ?? (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'),
+  appOrigin: optional('APP_ORIGIN') ?? 'http://localhost:5173',
+  production: process.env.NODE_ENV === 'production',
+  credentialEncryptionKey: optional('CREDENTIAL_ENCRYPTION_KEY'),
   anthropicApiKey: optional('ANTHROPIC_API_KEY'),
   /** Model used for attribute extraction. Sonnet for cheap test runs, Opus for production. */
   analysisModel: optional('ANALYSIS_MODEL') ?? 'claude-opus-5',

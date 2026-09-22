@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
 import { analyse } from '../analysis/run.js';
-import { env } from '../lib/env.js';
+import { readCredentials } from '../lib/credentials.js';
 
 let running: Promise<unknown> | null = null;
 
@@ -21,8 +21,9 @@ export const registerAnalysisRoutes = (app: FastifyInstance): void => {
       }),
     ]);
 
+    const credentials = await readCredentials<{ apiKey: string }>(request.user!.id, 'anthropic');
     return {
-      configured: env.anthropicApiKey !== null,
+      configured: credentials !== null,
       running: running !== null,
       pending,
       analysed,
@@ -37,10 +38,11 @@ export const registerAnalysisRoutes = (app: FastifyInstance): void => {
   });
 
   app.post('/api/analysis/run', async (request, reply) => {
-    if (!env.anthropicApiKey) {
+    const credentials = await readCredentials<{ apiKey: string }>(request.user!.id, 'anthropic');
+    if (!credentials) {
       return reply
         .code(503)
-        .send({ error: 'Не задан ANTHROPIC_API_KEY — добавьте ключ в apps/api/.env' });
+        .send({ error: 'Добавьте ключ Anthropic в настройках профиля' });
     }
     if (running) return reply.code(409).send({ error: 'Анализ уже выполняется' });
 
@@ -49,6 +51,7 @@ export const registerAnalysisRoutes = (app: FastifyInstance): void => {
       gameId: body.gameId,
       limit: body.limit ?? 100,
       force: body.force,
+      apiKey: credentials.apiKey,
     }).finally(() => {
       running = null;
     });

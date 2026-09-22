@@ -24,6 +24,7 @@ export class ApiError extends Error {
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`${BASE}${path}`, {
     ...init,
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
   if (!response.ok) {
@@ -180,7 +181,46 @@ export interface EldoradoStatus {
   mode: 'ready_to_publish' | 'not_configured';
 }
 
+export interface ProfileUser {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
+export interface IntegrationStatus {
+  funpay: { configured: true; requiresKey: false };
+  eldorado: { configured: boolean; updatedAt: string | null };
+  anthropic: { configured: boolean; updatedAt: string | null };
+}
+
 export const api = {
+  me: () => request<{ user: ProfileUser }>('/auth/me'),
+  login: (email: string, password: string) =>
+    request<{ user: ProfileUser }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+  register: (displayName: string, email: string, password: string) =>
+    request<{ user: ProfileUser; imported: string[] }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ displayName, email, password }),
+    }),
+  logout: () => request<{ ok: true }>('/auth/logout', { method: 'POST', body: '{}' }),
+  integrations: () => request<IntegrationStatus>('/profile/integrations'),
+  saveEldoradoCredentials: (clientId: string, clientSecret: string) =>
+    request<{ configured: true; clientIdMask: string }>('/profile/integrations/eldorado', {
+      method: 'PUT',
+      body: JSON.stringify({ clientId, clientSecret }),
+    }),
+  removeEldoradoCredentials: () =>
+    request<{ configured: false }>('/profile/integrations/eldorado', { method: 'DELETE' }),
+  saveAnthropicCredentials: (apiKey: string) =>
+    request<{ configured: true }>('/profile/integrations/anthropic', {
+      method: 'PUT',
+      body: JSON.stringify({ apiKey }),
+    }),
+  removeAnthropicCredentials: () =>
+    request<{ configured: false }>('/profile/integrations/anthropic', { method: 'DELETE' }),
   health: () => request<HealthStatus>('/health'),
   listings: (query: ListingQuery) => request<Page<GameAccount>>(`/listings?${toQuery(query)}`),
   listing: (id: string) => request<GameAccount>(`/listings/${id}`),

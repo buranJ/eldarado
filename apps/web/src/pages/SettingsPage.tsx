@@ -1,16 +1,20 @@
-import { Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { LogOut, Plus, Save, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { Badge } from '@/components/ui/Badge';
 import type { BadgeTone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Field';
+import { FieldLabel, Select, TextInput } from '@/components/ui/Field';
 import { MarketplaceBadge } from '@/components/MarketplaceBadge';
 import { DataField } from '@/components/DataField';
 import { GAMES } from '@/config/games';
 import { MARKETPLACES } from '@/config/marketplaces';
 import { SCAN_INTERVAL_HOURS, SUPPORTED_CURRENCIES } from '@/config/app';
 import { useAppState } from '@/app/providers/app-state-context';
+import { useAuth } from '@/app/providers/auth-context';
+import { useToast } from '@/app/providers/toast-context';
+import { api, type IntegrationStatus } from '@/api/client';
 import type { CurrencyCode, MarketplaceConnection } from '@gamestock/domain';
 
 const CONNECTION: Record<MarketplaceConnection, { label: string; tone: BadgeTone }> = {
@@ -27,6 +31,57 @@ const CURRENCY_LABELS: Record<CurrencyCode, string> = {
 
 export function SettingsPage() {
   const { baseCurrency, setBaseCurrency } = useAppState();
+  const { user, logout } = useAuth();
+  const toast = useToast();
+  const [integrations, setIntegrations] = useState<IntegrationStatus | null>(null);
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [anthropicKey, setAnthropicKey] = useState('');
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const refreshIntegrations = () =>
+    api.integrations().then(setIntegrations).catch(() => setIntegrations(null));
+
+  useEffect(() => {
+    void refreshIntegrations();
+  }, []);
+
+  const saveEldorado = async () => {
+    setSaving('eldorado');
+    try {
+      await api.saveEldoradoCredentials(clientId, clientSecret);
+      setClientId('');
+      setClientSecret('');
+      await refreshIntegrations();
+      toast.push({ title: 'Eldorado подключён', tone: 'success' });
+    } catch (error) {
+      toast.push({
+        title: 'Не удалось сохранить ключи Eldorado',
+        description: error instanceof Error ? error.message : undefined,
+        tone: 'error',
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const saveAnthropic = async () => {
+    setSaving('anthropic');
+    try {
+      await api.saveAnthropicCredentials(anthropicKey);
+      setAnthropicKey('');
+      await refreshIntegrations();
+      toast.push({ title: 'Ключ AI сохранён', tone: 'success' });
+    } catch (error) {
+      toast.push({
+        title: 'Не удалось сохранить ключ AI',
+        description: error instanceof Error ? error.message : undefined,
+        tone: 'error',
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -37,6 +92,148 @@ export function SettingsPage() {
 
       <div className="grid grid-cols-2 gap-4 items-start">
         <div className="space-y-4">
+          <Panel>
+            <PanelHeader
+              title="Профиль"
+              subtitle="Личные данные и активная сессия"
+              action={
+                <Button size="sm" icon={LogOut} onClick={() => void logout()}>
+                  Выйти
+                </Button>
+              }
+            />
+            <div className="px-4 py-3">
+              <DataField label="Имя" value={user.displayName} />
+              <DataField label="Почта" value={user.email} />
+              <DataField label="Сессия" value="Защищённая HttpOnly cookie · 30 дней" />
+            </div>
+          </Panel>
+
+          <Panel>
+            <PanelHeader
+              title="Интеграции профиля"
+              subtitle="Ключи зашифрованы на сервере и принадлежат только этому профилю"
+            />
+            <div className="space-y-5 px-4 py-4">
+              <section className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[12.5px] font-medium text-ink">Eldorado Seller API</p>
+                    <p className="text-[11.5px] text-ink-4">Client ID и Client Secret</p>
+                  </div>
+                  <Badge tone={integrations?.eldorado.configured ? 'pos' : 'muted'} dot>
+                    {integrations?.eldorado.configured ? 'Подключено' : 'Не подключено'}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="space-y-1">
+                    <FieldLabel>Client ID</FieldLabel>
+                    <TextInput
+                      value={clientId}
+                      onChange={(event) => setClientId(event.target.value)}
+                      placeholder={integrations?.eldorado.configured ? 'Введите для замены' : ''}
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <FieldLabel>Client Secret</FieldLabel>
+                    <TextInput
+                      type="password"
+                      value={clientSecret}
+                      onChange={(event) => setClientSecret(event.target.value)}
+                      placeholder={integrations?.eldorado.configured ? 'Введите для замены' : ''}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="success"
+                    icon={Save}
+                    disabled={!clientId.trim() || !clientSecret.trim() || saving !== null}
+                    onClick={() => void saveEldorado()}
+                  >
+                    Сохранить
+                  </Button>
+                  {integrations?.eldorado.configured ? (
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={Trash2}
+                      disabled={saving !== null}
+                      onClick={async () => {
+                        setSaving('eldorado');
+                        await api.removeEldoradoCredentials();
+                        await refreshIntegrations();
+                        setSaving(null);
+                      }}
+                    >
+                      Отключить
+                    </Button>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="space-y-3 border-t border-line pt-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[12.5px] font-medium text-ink">Anthropic AI</p>
+                    <p className="text-[11.5px] text-ink-4">Необязательно, пока AI-анализ отключён</p>
+                  </div>
+                  <Badge tone={integrations?.anthropic.configured ? 'pos' : 'muted'} dot>
+                    {integrations?.anthropic.configured ? 'Подключено' : 'Не подключено'}
+                  </Badge>
+                </div>
+                <label className="block space-y-1">
+                  <FieldLabel>API key</FieldLabel>
+                  <TextInput
+                    type="password"
+                    value={anthropicKey}
+                    onChange={(event) => setAnthropicKey(event.target.value)}
+                    placeholder={integrations?.anthropic.configured ? 'Введите новый ключ для замены' : ''}
+                    autoComplete="new-password"
+                  />
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="success"
+                    icon={Save}
+                    disabled={anthropicKey.trim().length < 20 || saving !== null}
+                    onClick={() => void saveAnthropic()}
+                  >
+                    Сохранить
+                  </Button>
+                  {integrations?.anthropic.configured ? (
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={Trash2}
+                      disabled={saving !== null}
+                      onClick={async () => {
+                        setSaving('anthropic');
+                        await api.removeAnthropicCredentials();
+                        await refreshIntegrations();
+                        setSaving(null);
+                      }}
+                    >
+                      Отключить
+                    </Button>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="flex items-center justify-between gap-3 border-t border-line pt-4">
+                <div>
+                  <p className="text-[12.5px] font-medium text-ink">FunPay</p>
+                  <p className="text-[11.5px] text-ink-4">Публичный сбор объявлений, ключ не требуется</p>
+                </div>
+                <Badge tone="pos" dot>Работает</Badge>
+              </section>
+            </div>
+          </Panel>
+
           <Panel>
             <PanelHeader
               title="Игры"
@@ -148,31 +345,6 @@ export function SettingsPage() {
             </div>
           </Panel>
 
-          <Panel>
-            <PanelHeader title="AI" subtitle="Модель нормализации и оценки аккаунтов" />
-            <div className="px-4 py-3">
-              <DataField label="Модель" value="Not configured" />
-              <DataField label="Скоринг" value="Enabled mock" />
-              <DataField label="Извлечение из текста" value="Будет подключено" />
-              <DataField label="Анализ изображений" value="Будет подключено" />
-              <DataField label="Сравнение с рынком" value="Mock" />
-            </div>
-            <div className="border-t border-line px-4 py-3">
-              <p className="text-[11.5px] leading-relaxed text-ink-4">
-                Значения Quality, Deal и Risk Score в текущей версии берутся из тестовых данных. При
-                подключении модели структура ответа не изменится.
-              </p>
-            </div>
-          </Panel>
-
-          <Panel>
-            <PanelHeader title="Доступ" subtitle="Внутренний инструмент без внешней авторизации" />
-            <div className="px-4 py-3">
-              <DataField label="Аутентификация" value="Не требуется" />
-              <DataField label="Режим" value="Demo" />
-              <DataField label="Роль" value="Оператор" />
-            </div>
-          </Panel>
         </div>
       </div>
     </div>

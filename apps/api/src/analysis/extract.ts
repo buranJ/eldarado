@@ -8,15 +8,19 @@ import { EXTRACTION_SYSTEM, buildExtractionPrompt } from './prompt.js';
 export const MODEL = env.analysisModel;
 export const RUBRIC_VERSION = 'cr-extract-v1';
 
-let client: Anthropic | null = null;
+const clients = new Map<string, Anthropic>();
 
-const getClient = (): Anthropic => {
-  if (!env.anthropicApiKey) {
+const getClient = (apiKey?: string): Anthropic => {
+  const resolvedKey = apiKey ?? env.anthropicApiKey;
+  if (!resolvedKey) {
     throw new Error(
       'Не задан ANTHROPIC_API_KEY — добавьте ключ в apps/api/.env, чтобы запустить AI-анализ',
     );
   }
-  client ??= new Anthropic({ apiKey: env.anthropicApiKey });
+  const existing = clients.get(resolvedKey);
+  if (existing) return existing;
+  const client = new Anthropic({ apiKey: resolvedKey });
+  clients.set(resolvedKey, client);
   return client;
 };
 
@@ -46,8 +50,9 @@ export interface ExtractionInput {
  */
 export const extractAttributes = async (
   input: ExtractionInput,
+  apiKey?: string,
 ): Promise<ExtractionResult> => {
-  const response = await getClient().messages.parse({
+  const response = await getClient(apiKey).messages.parse({
     model: MODEL,
     max_tokens: 4096,
     system: [
