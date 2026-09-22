@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+backups/
+apps/api/storage/
 *.local
 
 # Секреты: ключи Claude API и Eldorado Seller API

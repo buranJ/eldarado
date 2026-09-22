@@ -1,7 +1,10 @@
+import { access } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { toApiAccount } from '../pipeline/present.js';
+import { sourceImagePath } from '../lib/source-images.js';
 
 const querySchema = z.object({
   gameId: z.string().default('clash-royale'),
@@ -17,7 +20,7 @@ const querySchema = z.object({
   includeGone: z.enum(['true', 'false']).default('false'),
   page: z.coerce.number().min(1).default(1),
   pageSize: z.coerce.number().min(1).max(200).default(25),
-  sort: z.string().default('lastSeenAt'),
+  sort: z.string().default('externalId'),
   direction: z.enum(['asc', 'desc']).default('desc'),
 });
 
@@ -35,6 +38,28 @@ const SORTABLE = new Set([
 ]);
 
 export const registerListingRoutes = (app: FastifyInstance): void => {
+  app.get('/api/listings/:id/images/:position', async (request, reply) => {
+    const { id, position: rawPosition } = request.params as { id: string; position: string };
+    const position = Number(rawPosition);
+    if (!Number.isInteger(position) || position < 0 || position > 3) {
+      return reply.code(404).send({ error: 'Фото объявления не найдено' });
+    }
+    const image = await prisma.listingImage.findUnique({
+      where: { listingId_position: { listingId: id, position } },
+    });
+    if (!image) return reply.code(404).send({ error: 'Фото объявления не найдено' });
+    const path = sourceImagePath(image.fileName);
+    try {
+      await access(path);
+    } catch {
+      return reply.code(404).send({ error: 'Файл фото объявления не найден' });
+    }
+    return reply
+      .type(image.mimeType)
+      .header('Cache-Control', 'private, max-age=86400')
+      .send(createReadStream(path));
+  });
+
   app.get('/api/listings', async (request) => {
     const q = querySchema.parse(request.query);
 
@@ -67,13 +92,13 @@ export const registerListingRoutes = (app: FastifyInstance): void => {
 
     const orderBy = SORTABLE.has(q.sort)
       ? { [q.sort]: q.direction }
-      : { lastSeenAt: q.direction };
+      : { externalId: q.direction };
 
     const [total, rows] = await Promise.all([
       prisma.listing.count({ where }),
       prisma.listing.findMany({
         where,
-        include: { seller: true, analysis: true },
+        include: { seller: true, analysis: true, images: { orderBy: { position: 'asc' } } },
         orderBy,
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,
@@ -87,7 +112,7 @@ export const registerListingRoutes = (app: FastifyInstance): void => {
     const { id } = request.params as { id: string };
     const row = await prisma.listing.findUnique({
       where: { id },
-      include: { seller: true, analysis: true },
+      include: { seller: true, analysis: true, images: { orderBy: { position: 'asc' } } },
     });
     if (!row) return reply.code(404).send({ error: 'Объявление не найдено' });
     return toApiAccount(row);
@@ -98,7 +123,7 @@ export const registerListingRoutes = (app: FastifyInstance): void => {
     const { gameId = 'clash-royale', limit = '100' } = request.query as Record<string, string>;
     const rows = await prisma.listing.findMany({
       where: { gameId, disappearedAt: null, analysis: { isNot: null } },
-      include: { seller: true, analysis: true },
+      include: { seller: true, analysis: true, images: { orderBy: { position: 'asc' } } },
       orderBy: { analysis: { dealScore: 'desc' } },
       take: Math.min(Number(limit) || 100, 200),
     });

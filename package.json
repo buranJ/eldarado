@@ -10,12 +10,12 @@
   "scripts": {
     "dev": "npm run dev --workspace @gamestock/web",
     "dev:api": "npm run dev --workspace @gamestock/api",
-    "collect": "npm run collect --workspace @gamestock/api",
+    "collect": "npm run collect --workspace @gamestock/api --",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "db:push": "npm run db:push --workspace @gamestock/api",
     "db:studio": "npm run db:studio --workspace @gamestock/api",
-    "analyze": "npm run analyze --workspace @gamestock/api"
+    "analyze": "npm run analyze --workspace @gamestock/api --"
   }
 }

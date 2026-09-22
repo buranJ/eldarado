@@ -143,6 +143,18 @@ export function AccountDrawer({
       )}
 
       <div className="divide-y divide-line">
+        {source.imageUrls.length ? (
+          <div className="grid grid-cols-2 gap-2 px-5 py-4">
+            {source.imageUrls.map((imageUrl, index) => (
+              <img
+                key={imageUrl}
+                src={imageUrl}
+                alt={`Фото аккаунта ${source.listingId} — ${index + 1}`}
+                className="h-52 w-full rounded-lg border border-line object-contain"
+              />
+            ))}
+          </div>
+        ) : null}
         <FieldGroup title="Основное">
           <div>
             <DataField label="Игра" value="Clash Royale" />

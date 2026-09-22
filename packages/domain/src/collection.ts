@@ -33,6 +33,9 @@ export interface PrefilterConfig {
   minSellerRating: number;
   minSellerReviews: number;
   minSellerAgeMonths: number;
+  /** Missing public reputation data is left for the later AI/manual risk stage. */
+  allowUnknownSellerRating: boolean;
+  allowUnknownSellerAge: boolean;
   minPrice: number;
   maxPrice: number;
   priceCurrency: string;

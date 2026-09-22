@@ -86,8 +86,8 @@ export function EldoradoPublishModal({
 
   const submit = async () => {
     setError(null);
-    if (!image) return setError('Добавьте реальный скриншот аккаунта');
-    if (image.size > 10 * 1024 * 1024) return setError('Изображение должно быть не больше 10 МБ');
+    if (!image && !preview?.sourceImageUrls.length) return setError('У позиции нет фото аккаунта');
+    if (image && image.size > 10 * 1024 * 1024) return setError('Изображение должно быть не больше 10 МБ');
     const amount = Number(priceUsd.replace(',', '.'));
     if (!Number.isFinite(amount) || amount <= 0) return setError('Укажите цену в USD');
     if (!accountLogin.trim() || !accountPassword) {
@@ -99,13 +99,15 @@ export function EldoradoPublishModal({
 
     setSubmitting(true);
     try {
+      const imageInput = image
+        ? { imageDataUrl: await fileToDataUrl(image), imageFileName: image.name }
+        : {};
       const published = await api.publishToEldorado(item.id, {
         title,
         description,
         priceUsd: amount,
         hasOriginalEmail: originalEmail === 'yes',
-        imageDataUrl: await fileToDataUrl(image),
-        imageFileName: image.name,
+        ...imageInput,
         accountLogin,
         accountPassword,
         emailProviderUrl: emailProviderUrl || undefined,
@@ -219,6 +221,18 @@ export function EldoradoPublishModal({
                 />
               </FormField>
               <FormField label="Фото аккаунта">
+                {preview?.sourceImageUrls[0] && !image ? (
+                  <div className="mb-2 overflow-hidden rounded-md border border-line-2 bg-panel-2">
+                    <img
+                      src={preview.sourceImageUrls[0]}
+                      alt="Фото аккаунта с FunPay"
+                      className="h-24 w-full object-cover"
+                    />
+                    <p className="px-2 py-1 text-[10.5px] text-ink-3">
+                      Сохранено с FunPay · можно заменить
+                    </p>
+                  </div>
+                ) : null}
                 <input
                   className="block w-full text-[11px] text-ink-2 file:mr-2 file:rounded file:border-0 file:bg-panel-3 file:px-2 file:py-1 file:text-ink"
                   type="file"

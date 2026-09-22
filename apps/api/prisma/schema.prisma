@@ -75,6 +75,7 @@ model Listing {
 
   analysis  Analysis?
   inventory InventoryItem?
+  images    ListingImage[]
 
   @@unique([marketplace, externalId])
   @@index([gameId, status])
@@ -82,6 +83,21 @@ model Listing {
   @@index([gameId, trophies])
   @@index([gameId, priceMinor])
   @@index([disappearedAt])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String
+  position  Int
+  sourceUrl String
+  /// Basename inside apps/api/storage/listings; never an arbitrary path.
+  fileName  String
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  @@unique([listingId, position])
+  @@index([listingId])
 }
 
 model CollectionRun {

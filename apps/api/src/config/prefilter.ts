@@ -8,12 +8,14 @@ import type { PrefilterConfig } from '@gamestock/domain';
 export const PREFILTER: Record<string, PrefilterConfig> = {
   'clash-royale': {
     minSellerRating: 4,
-    minSellerReviews: 30,
+    minSellerReviews: 0,
     minSellerAgeMonths: 12,
+    allowUnknownSellerRating: true,
+    allowUnknownSellerAge: true,
     minPrice: 300,
     maxPrice: 8000,
     priceCurrency: 'RUB',
-    minTrophies: 6000,
+    minTrophies: 7000,
     minCards: 100,
     requireAutoDelivery: false,
   },

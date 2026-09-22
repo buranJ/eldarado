@@ -22,7 +22,6 @@ interface Step {
 
 const STEPS: Step[] = [
   { key: 'collected', label: 'Собрано' },
-  { key: 'analyzed', label: 'Проанализировано' },
   { key: 'top', label: 'Top 100' },
   { key: 'approved', label: 'Одобрено' },
   { key: 'purchased', label: 'Куплено' },
@@ -72,7 +71,11 @@ export function PipelinePanel({
                       <div
                         className={cn(
                           'h-full rounded-full transition-[width] duration-500',
-                          index >= 5 ? 'bg-pos' : index >= 2 ? 'bg-accent' : 'bg-ink-4',
+                          step.key === 'published' || step.key === 'sold'
+                            ? 'bg-pos'
+                            : step.key === 'collected'
+                              ? 'bg-ink-4'
+                              : 'bg-accent',
                         )}
                         style={{ width: `${Math.max(2, share)}%` }}
                       />

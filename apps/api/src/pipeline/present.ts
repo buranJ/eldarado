@@ -40,6 +40,7 @@ interface ListingRow {
   priceMinor: number;
   priceCurrency: string;
   autoDelivery: boolean;
+  images: { position: number }[];
   gameData: unknown;
   trophies: number | null;
   arena: number | null;
@@ -119,6 +120,9 @@ export const toApiAccount = (row: ListingRow) => {
   const gameData: Record<string, number | boolean | string | null> = { ...sourceData };
   for (const entry of extracted.numbers ?? []) gameData[entry.field] = entry.value;
   for (const entry of extracted.flags ?? []) gameData[entry.field] = entry.value;
+  const imageUrls = [...row.images]
+    .sort((left, right) => left.position - right.position)
+    .map((image) => `/api/listings/${row.id}/images/${image.position}`);
   return {
     id: row.id,
     externalId: row.externalId,
@@ -135,6 +139,8 @@ export const toApiAccount = (row: ListingRow) => {
       price: { amount: row.priceMinor / 100, currency: row.priceCurrency as CurrencyCode },
       detectedCurrency: row.priceCurrency as CurrencyCode,
       autoDelivery: row.autoDelivery,
+      imageUrl: imageUrls[0] ?? null,
+      imageUrls,
       foundAt: row.firstSeenAt.toISOString(),
       lastSeenAt: row.lastSeenAt.toISOString(),
       seller: {

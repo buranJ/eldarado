@@ -4,7 +4,8 @@ import { contentHash } from '../lib/hash.js';
 import { prefilter } from './prefilter.js';
 import { PREFILTER } from '../config/prefilter.js';
 import { funPayAdapter } from '../adapters/source/funpay/index.js';
-import type { RawOffer, SourceAdapter } from '../adapters/source/types.js';
+import type { RawOffer, SourceAdapter, SourceImage } from '../adapters/source/types.js';
+import { deleteSourceImages, saveSourceImage } from '../lib/source-images.js';
 
 const ADAPTERS: SourceAdapter[] = [funPayAdapter];
 
@@ -82,8 +83,48 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
       const seenIds: string[] = [];
 
       for (const offer of offers) {
-        seenIds.push(offer.externalId);
         const verdict = prefilter(offer, config, gameId);
+        const hash = hashOf(offer);
+        const existing = await prisma.listing.findUnique({
+          where: { marketplace_externalId: { marketplace, externalId: offer.externalId } },
+          select: {
+            id: true,
+            contentHash: true,
+            status: true,
+            inventory: { select: { id: true } },
+            images: { orderBy: { position: 'asc' } },
+          },
+        });
+
+        let downloadedImages: SourceImage[] | null = null;
+        let imageCheckFailed = false;
+        if (adapter.loadImages && (!existing?.images.length || existing.contentHash !== hash)) {
+          try {
+            downloadedImages = await adapter.loadImages(offer.externalId, 4);
+          } catch (error) {
+            imageCheckFailed = true;
+            console.warn(
+              `FunPay ${offer.externalId}: фото не проверено — ${error instanceof Error ? error.message : error}`,
+            );
+          }
+        }
+
+        const hasImages = (downloadedImages?.length ?? existing?.images.length ?? 0) > 0;
+        if (!hasImages) {
+          counters.rejected += 1;
+          if (
+            existing &&
+            !imageCheckFailed &&
+            !DOWNSTREAM_STATUSES.has(existing.status) &&
+            !existing.inventory
+          ) {
+            await prisma.listing.delete({ where: { id: existing.id } });
+            await deleteSourceImages(existing.images.map((image) => image.fileName));
+          }
+          continue;
+        }
+
+        seenIds.push(offer.externalId);
         if (verdict.passed) counters.passed += 1;
         else counters.rejected += 1;
 
@@ -113,12 +154,6 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
           },
         });
 
-        const hash = hashOf(offer);
-        const existing = await prisma.listing.findUnique({
-          where: { marketplace_externalId: { marketplace, externalId: offer.externalId } },
-          select: { id: true, contentHash: true, status: true },
-        });
-
         const nextStatus = verdict.passed ? 'ready_for_analysis' : 'prefiltered_out';
 
         if (!existing) {
@@ -138,7 +173,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
           ? (existing as { status: string }).status
           : nextStatus;
 
-        await prisma.listing.upsert({
+        const savedListing = await prisma.listing.upsert({
           where: { marketplace_externalId: { marketplace, externalId: offer.externalId } },
           create: {
             marketplace,
@@ -174,7 +209,31 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
             disappearedAt: null,
           },
         });
+
+        if (downloadedImages) {
+          const stored = await Promise.all(
+            downloadedImages.map(async (image, position) => ({
+              listingId: savedListing.id,
+              position,
+              sourceUrl: image.sourceUrl,
+              fileName: await saveSourceImage(offer.externalId, position, image),
+              mimeType: image.mimeType,
+            })),
+          );
+          await prisma.$transaction([
+            prisma.listingImage.deleteMany({ where: { listingId: savedListing.id } }),
+            prisma.listingImage.createMany({ data: stored }),
+          ]);
+          const storedNames = new Set(stored.map((image) => image.fileName));
+          await deleteSourceImages(
+            (existing?.images ?? [])
+              .map((image) => image.fileName)
+              .filter((fileName) => !storedNames.has(fileName)),
+          );
+        }
       }
+
+      await prisma.seller.deleteMany({ where: { listings: { none: {} } } });
 
       const gone = await prisma.listing.updateMany({
         where: {

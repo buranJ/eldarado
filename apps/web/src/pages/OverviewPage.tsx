@@ -2,13 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
-  Boxes,
-  Brain,
   CheckCircle2,
   Megaphone,
   Receipt,
   Search,
-  Trophy,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
@@ -178,29 +175,13 @@ export function OverviewPage() {
       />
 
       {loading ? (
-        <CardsSkeleton count={6} />
+        <CardsSkeleton count={3} />
       ) : (
-        <div className="grid grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <StatCard
             label="Найдено за 24 часа"
             value={formatNumber(kpi?.foundToday ?? 0)}
             icon={Search}
-          />
-          <StatCard
-            label="Прошло AI-анализ"
-            value={formatNumber(kpi?.analysed ?? 0)}
-            icon={Brain}
-          />
-          <StatCard
-            label="Попало в Top 100"
-            value={formatNumber(counts.top)}
-            icon={Trophy}
-            tone="accent"
-          />
-          <StatCard
-            label="Куплено"
-            value={formatNumber(counts.purchased)}
-            icon={Boxes}
           />
           <StatCard
             label="Опубликовано"

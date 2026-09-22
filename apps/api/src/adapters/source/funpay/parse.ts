@@ -146,3 +146,36 @@ export const parseCategory = (html: string): RawOffer[] => {
 
   return offers;
 };
+
+/**
+ * FunPay does not expose a publication timestamp in the category markup.
+ * Offer ids are allocated monotonically, so descending id is the closest
+ * stable representation of "newest first" available without guessing from
+ * seller activity or current online status.
+ */
+export const selectNewestOffers = (offers: RawOffer[], limit: number): RawOffer[] => {
+  const unique = [...new Map(offers.map((offer) => [offer.externalId, offer])).values()];
+  return unique
+    .sort((left, right) => {
+      const a = BigInt(left.externalId);
+      const b = BigInt(right.externalId);
+      return a === b ? 0 : a > b ? -1 : 1;
+    })
+    .slice(0, limit);
+};
+
+/** Original screenshots linked from the offer's "Картинки" block. */
+export const parseOfferImageUrls = (html: string): string[] => {
+  const $ = cheerio.load(html);
+  return $('.attachments-list a.attachments-thumb[href]')
+    .map((_, element) => $(element).attr('href') ?? '')
+    .get()
+    .filter((value) => {
+      try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && url.hostname === 'sfunpay.com' && url.pathname.startsWith('/s/offer/');
+      } catch {
+        return false;
+      }
+    });
+};

@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { EldoradoApiError, eldoradoClient } from '../adapters/destination/eldorado/client.js';
@@ -9,6 +10,7 @@ import {
 import { buildDraft } from '../adapters/destination/draft.js';
 import { ExtractionSchema, toAttributeMap } from '../analysis/schema.js';
 import { prisma } from '../lib/db.js';
+import { sourceImagePath } from '../lib/source-images.js';
 
 const optionalField = (max: number) => z.string().max(max).optional();
 
@@ -20,8 +22,9 @@ const publishSchema = z.object({
   imageDataUrl: z
     .string()
     .max(14_000_000)
-    .regex(/^data:image\/(?:jpeg|png|heic|heif);base64,/i, 'Поддерживаются JPEG, PNG и HEIC'),
-  imageFileName: z.string().trim().min(1).max(255),
+    .regex(/^data:image\/(?:jpeg|png|heic|heif);base64,/i, 'Поддерживаются JPEG, PNG и HEIC')
+    .optional(),
+  imageFileName: z.string().trim().min(1).max(255).optional(),
   accountLogin: z.string().trim().min(1).max(500),
   accountPassword: z.string().min(1).max(500),
   emailProviderUrl: optionalField(1_000),
@@ -39,7 +42,7 @@ const loadInventoryItem = (id: string) =>
   prisma.inventoryItem.findUnique({
     where: { id },
     include: {
-      listing: { include: { analysis: true } },
+      listing: { include: { analysis: true, images: { orderBy: { position: 'asc' } } } },
       listings: true,
     },
   });
@@ -102,6 +105,9 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       gameId: game.gameId,
       currency: 'USD',
       automaticDelivery: true,
+      sourceImageUrls: item.listing.images.map(
+        (image) => `/api/listings/${item.listing.id}/images/${image.position}`,
+      ),
     };
   });
 
@@ -133,10 +139,20 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       }
 
       try {
-        const imageInput = parseImage(input.imageDataUrl);
+        const imageInput = input.imageDataUrl
+          ? parseImage(input.imageDataUrl)
+          : item.listing.images[0]
+            ? {
+                bytes: await readFile(sourceImagePath(item.listing.images[0].fileName)),
+                mimeType: item.listing.images[0].mimeType,
+              }
+            : null;
+        if (!imageInput) {
+          return reply.code(422).send({ error: 'У позиции нет сохранённого фото аккаунта' });
+        }
         const image = await eldoradoClient.uploadAccountImage({
           ...imageInput,
-          fileName: input.imageFileName,
+          fileName: input.imageFileName ?? item.listing.images[0]?.fileName ?? 'account.jpg',
         });
         const draft = draftFor(item);
         const payload = buildAccountOfferPayload(

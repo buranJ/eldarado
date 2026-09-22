@@ -111,6 +111,7 @@ export interface EldoradoPublishPreview {
   gameId: string;
   currency: 'USD';
   automaticDelivery: true;
+  sourceImageUrls: string[];
 }
 
 export interface EldoradoPublishInput {
@@ -118,8 +119,8 @@ export interface EldoradoPublishInput {
   description: string;
   priceUsd: number;
   hasOriginalEmail: boolean;
-  imageDataUrl: string;
-  imageFileName: string;
+  imageDataUrl?: string;
+  imageFileName?: string;
   accountLogin: string;
   accountPassword: string;
   emailProviderUrl?: string;

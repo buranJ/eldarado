@@ -24,6 +24,13 @@ export interface RawOffer {
   gameData: Record<string, unknown>;
 }
 
+export interface SourceImage {
+  sourceUrl: string;
+  bytes: Buffer;
+  mimeType: string;
+  extension: string;
+}
+
 /**
  * Every source marketplace implements this. Adding PlayerAuctions or G2G means
  * adding an adapter, not touching the pipeline.
@@ -35,6 +42,8 @@ export interface SourceAdapter {
   supports(gameId: string): boolean;
   /** Fetches and parses one category page. */
   collect(gameId: string): Promise<RawOffer[]>;
+  /** Downloads up to four screenshots from an individual source listing. */
+  loadImages?(externalId: string, limit?: number): Promise<SourceImage[]>;
   /** Checks whether a single listing is still live (stage 5). */
   isAlive(externalId: string): Promise<boolean>;
 }

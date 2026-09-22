@@ -8,12 +8,10 @@ export const FUNPAY_CATEGORIES: Record<string, { lotId: number; label: string }>
 
 export const FUNPAY_BASE = 'https://funpay.com';
 
-/**
- * robots.txt disallows the "/<any>/offer" pattern, which covers the individual
- * listing pages.
- * We only ever request category pages. See docs/SOURCES.md.
- */
-export const FUNPAY_ALLOWED_PATH = /^\/lots\/\d+\/?$/;
+/** Only the category and the public offer page are in collector scope. */
+export const FUNPAY_ALLOWED_PATH = /^\/lots\/(?:\d+\/?|offer\?id=\d+)$/;
+
+export const FUNPAY_COLLECTION_LIMIT = 200;
 
 export const REQUEST_HEADERS: Record<string, string> = {
   'User-Agent':

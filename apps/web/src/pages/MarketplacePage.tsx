@@ -45,7 +45,7 @@ export function MarketplacePage() {
   const [filters, setFilters] = useState<MarketplaceFilterState>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [sort, setSort] = useState({ key: 'foundAt', direction: 'desc' as 'asc' | 'desc' });
+  const [sort, setSort] = useState({ key: 'id', direction: 'desc' as 'asc' | 'desc' });
   const [drawerAccount, setDrawerAccount] = useState<GameAccount | null>(null);
   const [purchaseAccount, setPurchaseAccount] = useState<GameAccount | null>(null);
 
@@ -55,7 +55,7 @@ export function MarketplacePage() {
       gameId: state.gameId,
       page,
       pageSize,
-      sort: SORT_KEYS[sort.key] ?? 'firstSeenAt',
+      sort: SORT_KEYS[sort.key] ?? 'externalId',
       direction: sort.direction,
     }),
     [filters, state.gameId, page, pageSize, sort],

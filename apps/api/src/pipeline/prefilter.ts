@@ -20,7 +20,7 @@ export const prefilter = (
   }
 
   if (seller.rating === null) {
-    reasons.push('у продавца нет отзывов');
+    if (!config.allowUnknownSellerRating) reasons.push('у продавца нет рейтинга');
   } else if (seller.rating < config.minSellerRating) {
     reasons.push(`рейтинг продавца ${seller.rating}★ < ${config.minSellerRating}★`);
   }
@@ -30,7 +30,7 @@ export const prefilter = (
   }
 
   if (seller.accountAgeMonths === null) {
-    reasons.push('неизвестен возраст аккаунта продавца');
+    if (!config.allowUnknownSellerAge) reasons.push('неизвестен возраст аккаунта продавца');
   } else if (seller.accountAgeMonths < config.minSellerAgeMonths) {
     reasons.push(
       `продавец на площадке ${seller.accountAgeMonths} мес. < ${config.minSellerAgeMonths} мес.`,

@@ -27,6 +27,10 @@ export interface SourceListing {
   detectedCurrency: CurrencyCode;
   seller: Seller;
   autoDelivery: boolean;
+  /** Locally cached screenshot, exposed through the GameStock API. */
+  imageUrl: string | null;
+  /** Up to four locally cached screenshots in source order. */
+  imageUrls: string[];
   foundAt: string;
   lastSeenAt: string;
 }
