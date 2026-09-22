@@ -33,7 +33,7 @@ const createTemporaryCredentials = (accountId: string) => {
   const timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
   const randomPart = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
   return {
-    login: `pending-${accountPart}-${timestamp}`,
+    login: `pending-${accountPart}-${timestamp}@gmail.com`,
     password: `Pending!${accountPart}-${timestamp}-${randomPart}`,
   };
 };
