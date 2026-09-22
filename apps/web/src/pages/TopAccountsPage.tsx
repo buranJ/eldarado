@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Check, Eye, MoreHorizontal, ShoppingCart, Trophy, X, Zap } from 'lucide-react';
+import { Check, Eye, ShoppingCart, Trophy, X, Zap } from 'lucide-react';
 import { PageHeader, MetaItem } from '@/components/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { Badge } from '@/components/ui/Badge';
 import { IconButton } from '@/components/ui/Button';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { SearchInput, Select } from '@/components/ui/Field';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
@@ -74,7 +73,7 @@ export function TopAccountsPage() {
     {
       key: 'account',
       header: 'Аккаунт',
-      width: 164,
+      width: 120,
       sortable: true,
       stickyLeft: 0,
       stickyEdge: true,
@@ -93,10 +92,10 @@ export function TopAccountsPage() {
     {
       key: 'title',
       header: 'Объявление',
-      width: 360,
+      width: 190,
       sortable: true,
       render: (row) => (
-        <span className="block max-w-[336px] truncate text-[12px] text-ink" title={row.source.title}>
+        <span className="block max-w-[166px] truncate text-[12px] text-ink" title={row.source.title}>
           {row.source.title}
         </span>
       ),
@@ -104,7 +103,7 @@ export function TopAccountsPage() {
     {
       key: 'source',
       header: 'Источник',
-      width: 106,
+      width: 88,
       sortable: true,
       render: (row) => <MarketplaceBadge id={row.source.marketplace} />,
     },
@@ -112,7 +111,7 @@ export function TopAccountsPage() {
       key: 'price',
       header: 'Цена',
       align: 'right',
-      width: 96,
+      width: 82,
       sortable: true,
       render: (row) => (
         <span className="num font-medium text-ink">{formatMoney(row.source.price)}</span>
@@ -121,7 +120,7 @@ export function TopAccountsPage() {
     {
       key: 'seller',
       header: 'Продавец',
-      width: 190,
+      width: 145,
       sortable: true,
       render: (row) => (
         <div className="min-w-0">
@@ -145,9 +144,10 @@ export function TopAccountsPage() {
     },
     {
       key: 'auto',
-      header: 'Автовыдача',
+      header: 'Авто',
+      title: 'Автоматическая выдача',
       align: 'center',
-      width: 92,
+      width: 76,
       render: (row) =>
         row.source.autoDelivery ? (
           <Zap size={13} className="mx-auto text-pos" strokeWidth={2.2} />
@@ -158,21 +158,21 @@ export function TopAccountsPage() {
     {
       key: 'foundAt',
       header: 'Найден',
-      width: 108,
+      width: 84,
       sortable: true,
       render: (row) => <span className="text-ink-3">{formatRelative(row.source.foundAt)}</span>,
     },
     {
       key: 'status',
       header: 'Статус',
-      width: 148,
+      width: 128,
       sortable: true,
       render: (row) => <StatusBadge domain="account" status={row.status} />,
     },
     {
       key: 'actions',
       header: '',
-      width: 74,
+      width: 128,
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
@@ -184,38 +184,32 @@ export function TopAccountsPage() {
             aria-label="Подробнее"
             onClick={() => setDrawerAccount(row)}
           />
-          <DropdownMenu
-            items={[
-              { key: 'details', label: 'Подробнее', icon: Eye, onSelect: () => setDrawerAccount(row) },
-              {
-                key: 'approve',
-                label: 'Одобрить',
-                icon: Check,
-                tone: 'success',
-                separatorBefore: true,
-                disabled: row.status === 'approved' || row.status === 'purchased',
-                onSelect: () => state.approveAccount(row.id),
-              },
-              {
-                key: 'reject',
-                label: 'Отклонить',
-                icon: X,
-                tone: 'danger',
-                disabled: row.status === 'rejected' || row.status === 'purchased',
-                onSelect: () => state.rejectAccount(row.id),
-              },
-              {
-                key: 'buy',
-                label: 'Купить',
-                icon: ShoppingCart,
-                separatorBefore: true,
-                disabled: row.status === 'purchased',
-                onSelect: () => setPurchaseAccount(row),
-              },
-            ]}
-            trigger={({ toggle: toggleMenu }) => (
-              <IconButton icon={MoreHorizontal} size="xs" variant="subtle" onClick={toggleMenu} />
-            )}
+          <IconButton
+            icon={Check}
+            size="xs"
+            variant="success"
+            title="Одобрить"
+            aria-label="Одобрить"
+            disabled={row.status === 'approved' || row.status === 'purchased'}
+            onClick={() => state.approveAccount(row.id)}
+          />
+          <IconButton
+            icon={X}
+            size="xs"
+            variant="danger"
+            title="Отклонить"
+            aria-label="Отклонить"
+            disabled={row.status === 'rejected' || row.status === 'purchased'}
+            onClick={() => state.rejectAccount(row.id)}
+          />
+          <IconButton
+            icon={ShoppingCart}
+            size="xs"
+            variant="default"
+            title="Купить"
+            aria-label="Купить"
+            disabled={row.status === 'purchased'}
+            onClick={() => setPurchaseAccount(row)}
           />
         </div>
       ),
@@ -268,7 +262,7 @@ export function TopAccountsPage() {
           onRowClick={(row) => setDrawerAccount(row)}
           selectedKey={drawerAccount?.id ?? null}
           loading={qualified.loading}
-          minWidth={1338}
+          minWidth={1040}
           empty={
             <EmptyState
               icon={Trophy}

@@ -15,7 +15,7 @@ export interface StatusDef {
 export const ACCOUNT_STATUS: Record<AccountStatus, StatusDef> = {
   new: { label: 'Новый', tone: 'muted' },
   prefiltered_out: { label: 'Отсеян фильтром', tone: 'muted' },
-  ready_for_analysis: { label: 'Ждёт анализа', tone: 'info' },
+  ready_for_analysis: { label: 'Прошёл проверку', tone: 'info' },
   analyzed: { label: 'Проанализирован', tone: 'info' },
   needs_review: { label: 'Требует проверки', tone: 'warn' },
   approved: { label: 'Одобрен', tone: 'pos' },
