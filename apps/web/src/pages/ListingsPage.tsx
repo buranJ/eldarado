@@ -41,7 +41,7 @@ export function ListingsPage() {
   const state = useAppState();
   const toast = useToast();
   const listings = useQuery(
-    () => api.eldoradoListings(state.gameId),
+    () => api.eldoradoListings(),
     [state.gameId, state.dataVersion],
   );
   const connection = useQuery(() => api.eldoradoStatus(), []);
@@ -89,9 +89,9 @@ export function ListingsPage() {
 
   const accessors: Record<string, SortAccessor<MarketplaceListing>> = {
     account: (row) => row.accountId,
-    sellPrice: (row) => row.sellPrice.amount,
-    purchasePrice: (row) => row.purchasePrice.amount,
-    profit: (row) => row.expectedProfit.amount,
+    sellPrice: (row) => row.sellPrice?.amount ?? null,
+    purchasePrice: (row) => row.purchasePrice?.amount ?? null,
+    profit: (row) => row.expectedProfit?.amount ?? null,
     status: (row) => row.status,
     publishedAt: (row) => (row.publishedAt ? new Date(row.publishedAt).getTime() : null),
   };
@@ -105,7 +105,12 @@ export function ListingsPage() {
     () =>
       sumMoney(
         rows
-          .filter((listing) => listing.status === 'published')
+          .filter(
+            (listing): listing is MarketplaceListing & {
+              sellPrice: NonNullable<MarketplaceListing['sellPrice']>;
+            } =>
+              listing.status === 'published' && listing.sellPrice !== null,
+          )
           .map((listing) => listing.sellPrice),
       ),
     [rows],
@@ -113,9 +118,14 @@ export function ListingsPage() {
 
   const deleteListing = async () => {
     if (!deleteTarget) return;
+    if (!deleteTarget.externalListingId) return;
     setDeleting(true);
     try {
-      await api.deleteEldoradoListing(deleteTarget.inventoryItemId);
+      if (deleteTarget.inventoryItemId) {
+        await api.deleteEldoradoListing(deleteTarget.inventoryItemId);
+      } else {
+        await api.deleteEldoradoOffer(deleteTarget.externalListingId);
+      }
       toast.push({
         tone: 'success',
         title: 'Объявление удалено',
@@ -143,7 +153,17 @@ export function ListingsPage() {
       sortable: true,
       stickyLeft: 0,
       stickyEdge: true,
-      render: (row) => <AccountCell id={row.accountId} title={row.title} gameId={row.gameId} />,
+      render: (row) =>
+        row.source === 'eldorado' ? (
+          <div className="min-w-0">
+            <div className="text-[12px] font-medium text-ink">Внешний лот Eldorado</div>
+            <div className="max-w-[276px] truncate text-[11.5px] text-ink-3" title={row.title}>
+              {row.title}
+            </div>
+          </div>
+        ) : (
+          <AccountCell id={row.accountId} title={row.title} gameId={row.gameId} />
+        ),
     },
     {
       key: 'marketplace',
@@ -177,7 +197,9 @@ export function ListingsPage() {
       align: 'right',
       width: 104,
       sortable: true,
-      render: (row) => <span className="num font-medium text-ink">{formatMoney(row.sellPrice)}</span>,
+      render: (row) => (
+        <span className="num font-medium text-ink">{formatMoney(row.sellPrice)}</span>
+      ),
     },
     {
       key: 'purchasePrice',
@@ -194,11 +216,14 @@ export function ListingsPage() {
       align: 'right',
       width: 128,
       sortable: true,
-      render: (row) => (
-        <span className={row.expectedProfit.amount >= 0 ? 'num text-pos' : 'num text-neg'}>
-          {formatMoney(row.expectedProfit, { signed: true })}
-        </span>
-      ),
+      render: (row) => {
+        if (!row.expectedProfit) return '—';
+        return (
+          <span className={row.expectedProfit.amount >= 0 ? 'num text-pos' : 'num text-neg'}>
+            {formatMoney(row.expectedProfit, { signed: true })}
+          </span>
+        );
+      },
     },
     {
       key: 'status',
@@ -254,7 +279,7 @@ export function ListingsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Объявления"
-        subtitle="Подготовленные и опубликованные лоты на площадках продажи"
+        subtitle="Все лоты учётной записи Eldorado, включая созданные вручную"
         meta={
           <>
             <MetaItem label="Всего объявлений:" value={formatNumber(rows.length)} />
@@ -276,6 +301,12 @@ export function ListingsPage() {
         id="eldorado"
         connection={connection.data?.configured ? 'connected' : 'not_connected'}
       />
+
+      {listings.data?.remoteError ? (
+        <div className="rounded-lg border border-[#4a2326] bg-[#241416] px-4 py-2.5 text-[11.5px] text-neg">
+          Не удалось обновить внешние объявления Eldorado: {listings.data.remoteError}
+        </div>
+      ) : null}
 
       <Panel className="overflow-hidden">
         <Tabs items={tabs} value={tab} onChange={setTab} />
@@ -332,7 +363,9 @@ export function ListingsPage() {
         }
       >
         <p className="text-[12px] leading-relaxed text-ink-2">
-          Удалится только объявление. Сам аккаунт и история операции останутся в инвентаре.
+          {deleteTarget?.inventoryItemId
+            ? 'Удалится только объявление. Сам аккаунт и история операции останутся в инвентаре.'
+            : 'Это внешний лот, созданный вне GameStock. Он будет удалён непосредственно с Eldorado.'}
         </p>
       </Modal>
     </div>

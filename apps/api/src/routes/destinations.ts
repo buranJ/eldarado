@@ -50,6 +50,23 @@ const loadInventoryItem = (id: string) =>
 
 type InventoryItem = NonNullable<Awaited<ReturnType<typeof loadInventoryItem>>>;
 
+const eldoradoState = (state: string): string => {
+  switch (state.toLowerCase()) {
+    case 'active':
+    case 'published':
+      return 'published';
+    case 'paused':
+    case 'inactive':
+      return 'paused';
+    case 'sold':
+      return 'sold';
+    case 'deleted':
+      return 'deleted';
+    default:
+      return 'error';
+  }
+};
+
 const draftFor = (item: InventoryItem) => {
   const parsed = ExtractionSchema.safeParse(item.listing.analysis?.extracted);
   const attributes = parsed.success ? toAttributeMap(parsed.data) : {};
@@ -78,50 +95,85 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
     mode: eldoradoClient.configured ? 'ready_to_publish' : 'not_configured',
   }));
 
-  app.get('/api/destinations/eldorado/listings', async (request) => {
-    const { gameId = 'clash-royale' } = request.query as { gameId?: string };
+  app.get('/api/destinations/eldorado/listings', async () => {
     const rows = await prisma.marketplaceListing.findMany({
-      where: { gameId, marketplace: 'eldorado' },
+      where: { marketplace: 'eldorado' },
       include: { item: { include: { listing: true } } },
       orderBy: { createdAt: 'desc' },
     });
+    const localItems = rows.map((row) => {
+      const purchaseInSaleCurrency = convertMinor(
+        row.purchaseMinor,
+        row.purchaseCurrency,
+        row.currency,
+      );
+      const expectedProfitMinor = Math.round(
+        row.sellMinor * (1 - DESTINATION_FEE_RATE) - purchaseInSaleCurrency,
+      );
+      const game = ELDORADO_ACCOUNT_GAMES[row.gameId];
+      return {
+        id: row.id,
+        inventoryItemId: row.itemId,
+        accountId: row.item.listing.externalId,
+        gameId: row.gameId,
+        gameLabel: row.gameId === 'clash-royale' ? 'Clash Royale' : row.gameId,
+        title: row.title,
+        marketplace: row.marketplace,
+        source: 'gamestock' as const,
+        externalListingId: row.externalId,
+        url: row.externalId && game ? eldoradoOfferUrl(game.seoAlias, row.externalId) : null,
+        sellPrice: { amount: row.sellMinor / 100, currency: row.currency },
+        purchasePrice: {
+          amount: row.purchaseMinor / 100,
+          currency: row.purchaseCurrency,
+        },
+        expectedProfit: {
+          amount: expectedProfitMinor / 100,
+          currency: row.currency,
+        },
+        status: row.status,
+        createdAt: row.createdAt.toISOString(),
+        publishedAt: row.publishedAt?.toISOString() ?? null,
+        errorMessage: row.error,
+      };
+    });
 
+    let remoteError: string | null = null;
+    let remoteOffers: Awaited<ReturnType<typeof eldoradoClient.listOffers>> = [];
+    try {
+      remoteOffers = await eldoradoClient.listOffers();
+    } catch (error) {
+      remoteError = error instanceof Error ? error.message : String(error);
+    }
+
+    const localIds = new Set(rows.map((row) => row.externalId).filter(Boolean));
+    const externalItems = remoteOffers
+      .filter((offer) => !localIds.has(offer.id))
+      .map((offer) => ({
+        id: `eldorado:${offer.id}`,
+        inventoryItemId: null,
+        accountId: 'Внешний лот',
+        gameId: `eldorado-${offer.gameId}`,
+        gameLabel: `Eldorado · игра ${offer.gameId}`,
+        title: offer.title,
+        marketplace: 'eldorado',
+        source: 'eldorado' as const,
+        externalListingId: offer.id,
+        url: null,
+        sellPrice: offer.price,
+        purchasePrice: null,
+        expectedProfit: null,
+        status: eldoradoState(offer.state),
+        createdAt: null,
+        publishedAt: null,
+        errorMessage: null,
+      }));
+
+    const items = [...externalItems, ...localItems];
     return {
-      items: rows.map((row) => {
-        const purchaseInSaleCurrency = convertMinor(
-          row.purchaseMinor,
-          row.purchaseCurrency,
-          row.currency,
-        );
-        const expectedProfitMinor = Math.round(
-          row.sellMinor * (1 - DESTINATION_FEE_RATE) - purchaseInSaleCurrency,
-        );
-        const game = ELDORADO_ACCOUNT_GAMES[row.gameId];
-        return {
-          id: row.id,
-          inventoryItemId: row.itemId,
-          accountId: row.item.listing.externalId,
-          gameId: row.gameId,
-          title: row.title,
-          marketplace: row.marketplace,
-          externalListingId: row.externalId,
-          url: row.externalId && game ? eldoradoOfferUrl(game.seoAlias, row.externalId) : null,
-          sellPrice: { amount: row.sellMinor / 100, currency: row.currency },
-          purchasePrice: {
-            amount: row.purchaseMinor / 100,
-            currency: row.purchaseCurrency,
-          },
-          expectedProfit: {
-            amount: expectedProfitMinor / 100,
-            currency: row.currency,
-          },
-          status: row.status,
-          createdAt: row.createdAt.toISOString(),
-          publishedAt: row.publishedAt?.toISOString() ?? null,
-          errorMessage: row.error,
-        };
-      }),
-      total: rows.length,
+      items,
+      total: items.length,
+      remoteError,
     };
   });
 
@@ -133,6 +185,18 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
     try {
       const offers = await eldoradoClient.listOffers();
       return { offers, total: offers.length };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = error instanceof EldoradoApiError ? error.status : 502;
+      return reply.code(status).send({ error: message });
+    }
+  });
+
+  app.delete('/api/destinations/eldorado/offers/:offerId', async (request, reply) => {
+    const { offerId } = request.params as { offerId: string };
+    try {
+      await eldoradoClient.deleteAccountOffer(offerId);
+      return { deleted: true, offerId };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const status = error instanceof EldoradoApiError ? error.status : 502;

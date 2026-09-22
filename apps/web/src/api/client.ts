@@ -228,9 +228,9 @@ export const api = {
   eldoradoPreview: (id: string) =>
     request<EldoradoPublishPreview>(`/inventory/${id}/eldorado/preview`),
   eldoradoStatus: () => request<EldoradoStatus>('/destinations/eldorado/status'),
-  eldoradoListings: (gameId: string) =>
-    request<{ items: MarketplaceListing[]; total: number }>(
-      `/destinations/eldorado/listings?gameId=${encodeURIComponent(gameId)}`,
+  eldoradoListings: () =>
+    request<{ items: MarketplaceListing[]; total: number; remoteError: string | null }>(
+      '/destinations/eldorado/listings',
     ),
   publishToEldorado: (id: string, input: EldoradoPublishInput) =>
     request<EldoradoPublishResult>(`/inventory/${id}/eldorado/publish`, {
@@ -240,6 +240,11 @@ export const api = {
   deleteEldoradoListing: (inventoryItemId: string) =>
     request<{ deleted: true; offerId: string }>(
       `/inventory/${inventoryItemId}/eldorado/listing`,
+      { method: 'DELETE' },
+    ),
+  deleteEldoradoOffer: (offerId: string) =>
+    request<{ deleted: true; offerId: string }>(
+      `/destinations/eldorado/offers/${encodeURIComponent(offerId)}`,
       { method: 'DELETE' },
     ),
 
