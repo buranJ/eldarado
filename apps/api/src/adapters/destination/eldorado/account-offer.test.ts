@@ -16,16 +16,18 @@ test('builds the current Eldorado account offer payload without legacy secrets',
         accountPassword: 'secret-password',
       },
     },
-    {
+    [{
       smallImage: 'small.jpg',
       largeImage: 'large.jpg',
       originalSizeImage: 'original.jpg',
-    },
+    }],
   );
 
   assert.equal(payload.augmentedGame.gameId, '52');
   assert.equal(payload.augmentedGame.category, 'Account');
   assert.equal(payload.details.guaranteedDeliveryTime, 'Instant');
+  assert.equal(payload.details.mainOfferImage.originalSizeImage, 'original.jpg');
+  assert.deepEqual(payload.details.offerImages, []);
   assert.deepEqual(payload.details.pricing.pricePerUnit, { amount: 29.5, currency: 'USD' });
   assert.equal('accountSecretDetails' in payload, false);
   assert.equal(payload.accountDeliveryDetails[0].accountDetails.accountLogin, 'seller-login');
@@ -47,7 +49,7 @@ test('normalizes partially supplied optional delivery groups like Eldorado selle
         mfaLogin: ' recovery-code ',
       },
     },
-    { smallImage: 's', largeImage: 'l', originalSizeImage: 'o' },
+    [{ smallImage: 's', largeImage: 'l', originalSizeImage: 'o' }],
   );
 
   assert.deepEqual(payload.accountDeliveryDetails[0].emailDetails, {

@@ -88,40 +88,43 @@ export const buildAccountOfferPayload = (
   gameId: string,
   draft: ListingDraft,
   input: EldoradoAccountPublishInput,
-  image: EldoradoOfferImage,
-): EldoradoAccountOfferPayload => ({
-  details: {
-    offerTitle: (input.title?.trim() || draft.title).slice(0, 160),
-    mainOfferImage: image,
-    offerImages: [image],
-    description: (input.description?.trim() || draft.description).slice(0, 2_000),
-    guaranteedDeliveryTime: 'Instant',
-    pricing: {
-      quantity: 1,
-      minQuantity: 1,
-      volumeDiscounts: [],
-      pricePerUnit: { amount: input.priceUsd, currency: 'USD' },
-    },
-    hasOriginalEmail: input.hasOriginalEmail,
-  },
-  augmentedGame: {
-    gameId,
-    category: 'Account',
-    tradeEnvironmentId: null,
-    offerAttributes: [],
-  },
-  accountDeliveryDetails: [
-    {
-      accountDetails: {
-        accountLogin: input.credentials.accountLogin.trim(),
-        accountPassword: input.credentials.accountPassword,
+  images: [EldoradoOfferImage, ...EldoradoOfferImage[]],
+): EldoradoAccountOfferPayload => {
+  const [mainOfferImage, ...offerImages] = images;
+  return {
+    details: {
+      offerTitle: (input.title?.trim() || draft.title).slice(0, 160),
+      mainOfferImage,
+      offerImages,
+      description: (input.description?.trim() || draft.description).slice(0, 2_000),
+      guaranteedDeliveryTime: 'Instant',
+      pricing: {
+        quantity: 1,
+        minQuantity: 1,
+        volumeDiscounts: [],
+        pricePerUnit: { amount: input.priceUsd, currency: 'USD' },
       },
-      emailDetails: emailDetails(input.credentials),
-      mfaDetails: mfaDetails(input.credentials),
-      additionalInfo: optionalText(input.credentials.additionalInfo),
+      hasOriginalEmail: input.hasOriginalEmail,
     },
-  ],
-});
+    augmentedGame: {
+      gameId,
+      category: 'Account',
+      tradeEnvironmentId: null,
+      offerAttributes: [],
+    },
+    accountDeliveryDetails: [
+      {
+        accountDetails: {
+          accountLogin: input.credentials.accountLogin.trim(),
+          accountPassword: input.credentials.accountPassword,
+        },
+        emailDetails: emailDetails(input.credentials),
+        mfaDetails: mfaDetails(input.credentials),
+        additionalInfo: optionalText(input.credentials.additionalInfo),
+      },
+    ],
+  };
+};
 
 export const eldoradoOfferUrl = (seoAlias: string, offerId: string): string =>
   `https://www.eldorado.gg/${seoAlias}/oa/${offerId}`;

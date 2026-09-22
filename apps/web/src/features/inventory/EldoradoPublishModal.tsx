@@ -68,6 +68,8 @@ export function EldoradoPublishModal({
   const [priceUsd, setPriceUsd] = useState(() => toBase(salePrice, 'USD').amount.toFixed(2));
   const [originalEmail, setOriginalEmail] = useState('yes');
   const [image, setImage] = useState<File | null>(null);
+  const [replacementImageUrl, setReplacementImageUrl] = useState<string | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [temporaryCredentials] = useState(() => createTemporaryCredentials(item.accountId));
   const [accountLogin, setAccountLogin] = useState(temporaryCredentials.login);
   const [accountPassword, setAccountPassword] = useState(temporaryCredentials.password);
@@ -98,6 +100,22 @@ export function EldoradoPublishModal({
       active = false;
     };
   }, [item.id]);
+
+  useEffect(() => {
+    if (!image) {
+      setReplacementImageUrl(null);
+      return undefined;
+    }
+    const url = URL.createObjectURL(image);
+    setReplacementImageUrl(url);
+    setActiveImageIndex(0);
+    return () => URL.revokeObjectURL(url);
+  }, [image]);
+
+  const sourceImageUrls = preview?.sourceImageUrls.slice(0, 4) ?? [];
+  const previewImageUrls = replacementImageUrl
+    ? [replacementImageUrl, ...sourceImageUrls.slice(1)]
+    : sourceImageUrls;
 
   const submit = async () => {
     setError(null);
@@ -243,17 +261,39 @@ export function EldoradoPublishModal({
                   ]}
                 />
               </FormField>
-              <FormField label="Фото аккаунта">
-                {preview?.sourceImageUrls[0] && !image ? (
+              <FormField label={`Фото аккаунта (${previewImageUrls.length})`}>
+                {previewImageUrls[activeImageIndex] ? (
                   <div className="mb-2 overflow-hidden rounded-md border border-line-2 bg-panel-2">
                     <img
-                      src={preview.sourceImageUrls[0]}
-                      alt="Фото аккаунта с FunPay"
-                      className="h-24 w-full object-cover"
+                      src={previewImageUrls[activeImageIndex]}
+                      alt={`Фото аккаунта ${activeImageIndex + 1}`}
+                      className="h-36 w-full object-contain"
                     />
                     <p className="px-2 py-1 text-[10.5px] text-ink-3">
-                      Сохранено с FunPay · можно заменить
+                      Фото {activeImageIndex + 1} из {previewImageUrls.length}
+                      {activeImageIndex === 0 ? ' · основное' : ' · дополнительное'}
                     </p>
+                  </div>
+                ) : null}
+                {previewImageUrls.length > 1 ? (
+                  <div className="mb-2 grid grid-cols-4 gap-1.5">
+                    {previewImageUrls.map((url, index) => (
+                      <button
+                        key={`${url}-${index}`}
+                        type="button"
+                        onClick={() => setActiveImageIndex(index)}
+                        className={`overflow-hidden rounded border bg-panel-2 ${
+                          activeImageIndex === index ? 'border-accent' : 'border-line-2'
+                        }`}
+                        aria-label={`Показать фото ${index + 1}`}
+                      >
+                        <img
+                          src={url}
+                          alt=""
+                          className="h-12 w-full object-cover"
+                        />
+                      </button>
+                    ))}
                   </div>
                 ) : null}
                 <input
@@ -262,6 +302,9 @@ export function EldoradoPublishModal({
                   accept="image/jpeg,image/png,image/heic,image/heif"
                   onChange={(e) => setImage(e.target.files?.[0] ?? null)}
                 />
+                <p className="mt-1 text-[10.5px] text-ink-4">
+                  Все фото отправятся в Eldorado. Выбранный файл заменит только основное.
+                </p>
               </FormField>
             </div>
 

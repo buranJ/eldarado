@@ -7,6 +7,7 @@ import {
   ELDORADO_ACCOUNT_GAMES,
   eldoradoOfferUrl,
 } from '../adapters/destination/eldorado/account-offer.js';
+import type { EldoradoOfferImage } from '../adapters/destination/eldorado/account-offer.js';
 import { buildDraft } from '../adapters/destination/draft.js';
 import { ExtractionSchema, toAttributeMap } from '../analysis/schema.js';
 import { prisma } from '../lib/db.js';
@@ -357,21 +358,28 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       }
 
       try {
-        const imageInput = input.imageDataUrl
-          ? parseImage(input.imageDataUrl)
-          : item.listing.images[0]
-            ? {
-                bytes: await readFile(sourceImagePath(item.listing.images[0].fileName)),
-                mimeType: item.listing.images[0].mimeType,
-              }
-            : null;
-        if (!imageInput) {
+        const storedImages = item.listing.images.slice(0, 4);
+        const imageInputs = await Promise.all(
+          storedImages.map(async (image) => ({
+            bytes: await readFile(sourceImagePath(image.fileName)),
+            mimeType: image.mimeType,
+            fileName: image.fileName,
+          })),
+        );
+        if (input.imageDataUrl) {
+          const replacement = parseImage(input.imageDataUrl);
+          imageInputs[0] = {
+            ...replacement,
+            fileName: input.imageFileName ?? 'account.jpg',
+          };
+        }
+        if (imageInputs.length === 0) {
           return reply.code(422).send({ error: 'У позиции нет сохранённого фото аккаунта' });
         }
-        const image = await eldoradoClient.uploadAccountImage({
-          ...imageInput,
-          fileName: input.imageFileName ?? item.listing.images[0]?.fileName ?? 'account.jpg',
-        });
+        const uploadedImages: EldoradoOfferImage[] = [];
+        for (const imageInput of imageInputs) {
+          uploadedImages.push(await eldoradoClient.uploadAccountImage(imageInput));
+        }
         const draft = draftFor(item);
         const payload = buildAccountOfferPayload(
           game.gameId,
@@ -392,7 +400,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
               additionalInfo: input.additionalInfo,
             },
           },
-          image,
+          uploadedImages as [EldoradoOfferImage, ...EldoradoOfferImage[]],
         );
         const offerId = await eldoradoClient.createAccountOffer(payload);
         const publishedAt = new Date();
