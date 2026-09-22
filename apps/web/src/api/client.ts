@@ -188,9 +188,17 @@ export const api = {
     request<ActivityEvent[]>(`/activity?gameId=${gameId}&limit=${limit}`),
 
   approve: (listingId: string) =>
-    request<{ status: string }>(`/listings/${listingId}/approve`, { method: 'POST', body: '{}' }),
+    request<{ status: string; inventoryItemId: string }>(`/listings/${listingId}/approve`, {
+      method: 'POST',
+      body: '{}',
+    }),
   reject: (listingId: string) =>
     request<{ status: string }>(`/listings/${listingId}/reject`, { method: 'POST', body: '{}' }),
+  bulkDecision: (ids: string[], action: 'approve' | 'reject') =>
+    request<{ action: 'approve' | 'reject'; processed: number; inventoryItemIds: string[] }>(
+      '/listings/bulk-decision',
+      { method: 'POST', body: JSON.stringify({ ids, action }) },
+    ),
   purchase: (listingId: string) =>
     request<{ status: string; inventoryItemId: string }>(`/listings/${listingId}/purchase`, {
       method: 'POST',

@@ -23,9 +23,11 @@ export interface AppStateApi {
   dataVersion: number;
   notifyDataChanged: () => void;
 
-  /* Operator decisions — persisted through the API. */
+  /* Operator decisions — approval immediately creates an inventory item. */
   approveAccount: (listingId: string) => void;
   rejectAccount: (listingId: string) => void;
+  bulkApproveAccounts: (listingIds: string[]) => Promise<boolean>;
+  bulkRejectAccounts: (listingIds: string[]) => Promise<boolean>;
   purchaseAccount: (listingId: string) => void;
 
   /* Inventory — persisted through the API. */

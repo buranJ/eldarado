@@ -3,7 +3,7 @@ import { Check, Eye, ShoppingCart, Trophy, X, Zap } from 'lucide-react';
 import { PageHeader, MetaItem } from '@/components/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { Badge } from '@/components/ui/Badge';
-import { IconButton } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
 import { SearchInput, Select } from '@/components/ui/Field';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
@@ -48,6 +48,8 @@ export function TopAccountsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [pageSize, setPageSize] = useState(25);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [drawerAccount, setDrawerAccount] = useState<GameAccount | null>(null);
   const [purchaseAccount, setPurchaseAccount] = useState<GameAccount | null>(null);
 
@@ -68,14 +70,85 @@ export function TopAccountsPage() {
     direction: 'desc',
   });
   const pagination = usePagination(sorted, pageSize);
+  const selectablePageIds = pagination.pageRows
+    .filter((account) => account.status !== 'purchased')
+    .map((account) => account.id);
+  const allPageSelected =
+    selectablePageIds.length > 0 && selectablePageIds.every((id) => selectedIds.has(id));
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelected = (id: string) => {
+    setSelectedIds((current) => {
+      if (!current.has(id)) return current;
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const togglePage = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allPageSelected) selectablePageIds.forEach((id) => next.delete(id));
+      else selectablePageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const runBulkDecision = async (action: 'approve' | 'reject') => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    const ids = [...selectedIds];
+    const succeeded =
+      action === 'approve'
+        ? await state.bulkApproveAccounts(ids)
+        : await state.bulkRejectAccounts(ids);
+    if (succeeded) setSelectedIds(new Set());
+    setBulkBusy(false);
+  };
 
   const columns: Column<GameAccount>[] = [
+    {
+      key: 'select',
+      header: (
+        <input
+          type="checkbox"
+          checked={allPageSelected}
+          aria-label="Выбрать все аккаунты на странице"
+          onClick={(event) => event.stopPropagation()}
+          onChange={togglePage}
+          className="size-3.5 cursor-pointer accent-[#6e8bff]"
+        />
+      ),
+      width: 42,
+      align: 'center',
+      stickyLeft: 0,
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(row.id)}
+          disabled={row.status === 'purchased'}
+          aria-label={`Выбрать аккаунт ${row.source.listingId}`}
+          onClick={(event) => event.stopPropagation()}
+          onChange={() => toggleSelected(row.id)}
+          className="size-3.5 cursor-pointer accent-[#6e8bff] disabled:cursor-not-allowed disabled:opacity-30"
+        />
+      ),
+    },
     {
       key: 'account',
       header: 'Аккаунт',
       width: 120,
       sortable: true,
-      stickyLeft: 0,
+      stickyLeft: 42,
       stickyEdge: true,
       render: (row) => (
         <div className="min-w-0">
@@ -188,10 +261,13 @@ export function TopAccountsPage() {
             icon={Check}
             size="sm"
             variant="success"
-            title="Одобрить"
-            aria-label="Одобрить"
-            disabled={row.status === 'approved' || row.status === 'purchased'}
-            onClick={() => state.approveAccount(row.id)}
+            title="Одобрить и добавить в инвентарь"
+            aria-label="Одобрить и добавить в инвентарь"
+            disabled={row.status === 'purchased'}
+            onClick={() => {
+              clearSelected(row.id);
+              state.approveAccount(row.id);
+            }}
           />
           <IconButton
             icon={X}
@@ -200,7 +276,10 @@ export function TopAccountsPage() {
             title="Отклонить"
             aria-label="Отклонить"
             disabled={row.status === 'rejected' || row.status === 'purchased'}
-            onClick={() => state.rejectAccount(row.id)}
+            onClick={() => {
+              clearSelected(row.id);
+              state.rejectAccount(row.id);
+            }}
           />
           <IconButton
             icon={ShoppingCart}
@@ -252,6 +331,42 @@ export function TopAccountsPage() {
         }
       />
 
+      {selectedIds.size > 0 ? (
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-line-2 bg-panel px-4 py-2.5">
+          <span className="text-[12.5px] text-ink-2">
+            Выбрано: <span className="num font-semibold text-ink">{selectedIds.size}</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="success"
+              icon={Check}
+              disabled={bulkBusy}
+              onClick={() => void runBulkDecision('approve')}
+            >
+              Одобрить и добавить в инвентарь
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              icon={X}
+              disabled={bulkBusy}
+              onClick={() => void runBulkDecision('reject')}
+            >
+              Отклонить
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={bulkBusy}
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Снять выбор
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <Panel className="overflow-hidden">
         <DataTable
           columns={columns}
@@ -262,7 +377,7 @@ export function TopAccountsPage() {
           onRowClick={(row) => setDrawerAccount(row)}
           selectedKey={drawerAccount?.id ?? null}
           loading={qualified.loading}
-          minWidth={1060}
+          minWidth={1102}
           empty={
             <EmptyState
               icon={Trophy}
@@ -296,10 +411,12 @@ export function TopAccountsPage() {
         open={drawerAccount !== null}
         onClose={() => setDrawerAccount(null)}
         onApprove={(id) => {
+          clearSelected(id);
           state.approveAccount(id);
           setDrawerAccount(null);
         }}
         onReject={(id) => {
+          clearSelected(id);
           state.rejectAccount(id);
           setDrawerAccount(null);
         }}
@@ -312,7 +429,10 @@ export function TopAccountsPage() {
         account={purchaseAccount}
         open={purchaseAccount !== null}
         onClose={() => setPurchaseAccount(null)}
-        onConfirm={state.purchaseAccount}
+        onConfirm={(id) => {
+          clearSelected(id);
+          state.purchaseAccount(id);
+        }}
       />
     </div>
   );

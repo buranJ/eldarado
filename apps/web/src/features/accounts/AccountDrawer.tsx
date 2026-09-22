@@ -95,9 +95,8 @@ export function AccountDrawer({
                   variant="success"
                   icon={Check}
                   onClick={() => onApprove(account.id)}
-                  disabled={account.status === 'approved'}
                 >
-                  Одобрить
+                  Одобрить и в инвентарь
                 </Button>
                 <Button variant="primary" icon={ShoppingCart} onClick={() => onBuy(account)}>
                   Купить · {formatMoney(source.price)}

@@ -33,17 +33,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       action: () => Promise<unknown>,
       success: { title: string; description?: string },
       failureTitle: string,
-    ) => {
+    ): Promise<boolean> => {
       try {
         await action();
         notifyDataChanged();
         toast.push({ tone: 'success', ...success });
+        return true;
       } catch (error) {
         toast.push({
           tone: 'error',
           title: failureTitle,
           description: error instanceof Error ? error.message : String(error),
         });
+        return false;
       }
     },
     [notifyDataChanged, toast],
@@ -53,10 +55,33 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     (listingId: string) => {
       void mutate(
         () => api.approve(listingId),
-        { title: 'Аккаунт одобрен' },
+        { title: 'Аккаунт добавлен в инвентарь' },
         'Не удалось одобрить аккаунт',
       );
     },
+    [mutate],
+  );
+
+  const bulkApproveAccounts = useCallback(
+    (listingIds: string[]) =>
+      mutate(
+        () => api.bulkDecision(listingIds, 'approve'),
+        {
+          title: `Добавлено в инвентарь: ${listingIds.length}`,
+          description: 'Все выбранные аккаунты одобрены.',
+        },
+        'Не удалось одобрить выбранные аккаунты',
+      ),
+    [mutate],
+  );
+
+  const bulkRejectAccounts = useCallback(
+    (listingIds: string[]) =>
+      mutate(
+        () => api.bulkDecision(listingIds, 'reject'),
+        { title: `Отклонено аккаунтов: ${listingIds.length}` },
+        'Не удалось отклонить выбранные аккаунты',
+      ),
     [mutate],
   );
 
@@ -152,6 +177,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       notifyDataChanged,
       approveAccount,
       rejectAccount,
+      bulkApproveAccounts,
+      bulkRejectAccounts,
       purchaseAccount,
       setManualPrice,
       prepareItem,
@@ -167,6 +194,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       notifyDataChanged,
       approveAccount,
       rejectAccount,
+      bulkApproveAccounts,
+      bulkRejectAccounts,
       purchaseAccount,
       setManualPrice,
       prepareItem,
