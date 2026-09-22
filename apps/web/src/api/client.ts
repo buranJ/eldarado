@@ -164,6 +164,8 @@ export interface OverviewDto {
 export interface SyncStatus {
   running: boolean;
   lastRun: CollectionRun | null;
+  autoSyncEnabled: boolean;
+  nextRunAt: string | null;
 }
 
 export interface HealthStatus {
@@ -224,5 +226,10 @@ export const api = {
     request<CollectionRun>('/sync/run', {
       method: 'POST',
       body: JSON.stringify({ gameId }),
+    }),
+  setAutoSync: (enabled: boolean) =>
+    request<Pick<SyncStatus, 'autoSyncEnabled' | 'nextRunAt'>>('/sync/auto', {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
     }),
 };

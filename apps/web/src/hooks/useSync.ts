@@ -10,6 +10,7 @@ export const useSync = () => {
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState(false);
+  const [updatingAutoSync, setUpdatingAutoSync] = useState(false);
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -56,5 +57,28 @@ export const useSync = () => {
     [load],
   );
 
-  return { status, error, triggering, run, reload: load };
+  const setAutoSync = useCallback(
+    async (enabled: boolean): Promise<{ ok: true } | { ok: false; message: string }> => {
+      setUpdatingAutoSync(true);
+      try {
+        const schedule = await api.setAutoSync(enabled);
+        setStatus((current) =>
+          current
+            ? { ...current, ...schedule }
+            : { running: false, lastRun: null, ...schedule },
+        );
+        setError(null);
+        return { ok: true };
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause);
+        setError(message);
+        return { ok: false, message };
+      } finally {
+        setUpdatingAutoSync(false);
+      }
+    },
+    [],
+  );
+
+  return { status, error, triggering, updatingAutoSync, run, setAutoSync, reload: load };
 };

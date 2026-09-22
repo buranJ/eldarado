@@ -1,5 +1,10 @@
 import type { SourceAdapter, RawOffer, SourceImage } from '../types.js';
-import { parseCategory, parseOfferImageUrls, selectNewestOffers } from './parse.js';
+import {
+  parseCategory,
+  parseOfferImageUrls,
+  parseOfferIsLive,
+  selectNewestOffers,
+} from './parse.js';
 import {
   FUNPAY_ALLOWED_PATH,
   FUNPAY_BASE,
@@ -17,14 +22,18 @@ const throttle = async (): Promise<void> => {
   lastRequestAt = Date.now();
 };
 
-const fetchPath = async (path: string): Promise<string> => {
+const fetchPublic = async (path: string): Promise<Response> => {
   if (!FUNPAY_ALLOWED_PATH.test(path)) {
     throw new Error(
       `Путь ${path} не разрешён: доступны только категория и публичная страница лота`,
     );
   }
   await throttle();
-  const response = await fetch(`${FUNPAY_BASE}${path}`, { headers: REQUEST_HEADERS });
+  return fetch(`${FUNPAY_BASE}${path}`, { headers: REQUEST_HEADERS });
+};
+
+const fetchPath = async (path: string): Promise<string> => {
+  const response = await fetchPublic(path);
   if (!response.ok) {
     throw new Error(`FunPay ответил ${response.status} на ${path}`);
   }
@@ -80,13 +89,15 @@ export const funPayAdapter: SourceAdapter = {
     return downloaded.filter((image): image is SourceImage => image !== null);
   },
 
-  /**
-   * Liveness remains derived from the category sweep so collection does not
-   * double the number of detail-page requests.
-   */
-  async isAlive(): Promise<boolean> {
-    throw new Error(
-      'FunPay: проверка отдельного лота недоступна — актуальность определяется по обходу категории',
-    );
+  async isAlive(externalId): Promise<boolean> {
+    if (!/^\d+$/.test(externalId)) return false;
+    const response = await fetchPublic(`/lots/offer?id=${externalId}`);
+    if (response.status === 404 || response.status === 410) return false;
+    if (!response.ok) {
+      throw new Error(`FunPay ответил ${response.status} при проверке лота ${externalId}`);
+    }
+    const html = await response.text();
+    if (parseOfferIsLive(html, externalId)) return true;
+    throw new Error(`FunPay: не удалось определить состояние лота ${externalId}`);
   },
 };

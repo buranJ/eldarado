@@ -70,11 +70,3 @@ export const formatDuration = (hours: number): string =>
   hours >= 1
     ? `${Math.round(hours)} ${plural(Math.round(hours), ['ч', 'ч', 'ч'])}`
     : `${Math.max(1, Math.round(hours * 60))} мин`;
-
-/** Next occurrence of the daily collection hour, in local time. */
-export const nextDailyRun = (hour: number, from: number): Date => {
-  const next = new Date(from);
-  next.setHours(hour, 0, 0, 0);
-  if (next.getTime() <= from) next.setDate(next.getDate() + 1);
-  return next;
-};

@@ -179,3 +179,9 @@ export const parseOfferImageUrls = (html: string): string[] => {
       }
     });
 };
+
+/** A live public offer page contains a purchase form bound to this offer id. */
+export const parseOfferIsLive = (html: string, externalId: string): boolean => {
+  const $ = cheerio.load(html);
+  return $(`input[name="offer_id"][value="${externalId}"]`).length > 0;
+};

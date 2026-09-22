@@ -42,11 +42,13 @@ export interface CollectOptions {
   gameId?: string;
   /** Parse and report without writing to the database. */
   dryRun?: boolean;
+  /** Verify unseen source offers and permanently remove stale source records. */
+  pruneMissing?: boolean;
 }
 
 /**
  * One collection sweep: fetch a category, upsert every offer, run the
- * pre-filter, and mark listings that vanished from the source.
+ * pre-filter, and optionally remove listings confirmed missing from the source.
  */
 export const collect = async (options: CollectOptions = {}): Promise<CollectionRun> => {
   const marketplace = options.marketplace ?? 'funpay';
@@ -72,6 +74,9 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
 
   try {
     const offers = await adapter.collect(gameId);
+    if (offers.length === 0) {
+      throw new Error('Источник не вернул ни одного объявления; очистка базы отменена');
+    }
     counters.seen = offers.length;
 
     if (options.dryRun) {
@@ -233,18 +238,63 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
         }
       }
 
-      await prisma.seller.deleteMany({ where: { listings: { none: {} } } });
+      if (options.pruneMissing) {
+        const candidates = await prisma.listing.findMany({
+          where: {
+            marketplace,
+            gameId,
+            externalId: { notIn: seenIds },
+            inventory: null,
+          },
+          select: {
+            id: true,
+            externalId: true,
+            images: { select: { fileName: true } },
+          },
+        });
 
-      const gone = await prisma.listing.updateMany({
-        where: {
-          marketplace,
-          gameId,
-          externalId: { notIn: seenIds },
-          disappearedAt: null,
-        },
-        data: { disappearedAt: new Date() },
-      });
-      counters.disappeared = gone.count;
+        for (const candidate of candidates) {
+          let alive: boolean;
+          try {
+            alive = await adapter.isAlive(candidate.externalId);
+          } catch (error) {
+            console.warn(
+              `${marketplace} ${candidate.externalId}: актуальность не проверена — ${error instanceof Error ? error.message : error}`,
+            );
+            continue;
+          }
+          if (alive) {
+            await prisma.listing.update({
+              where: { id: candidate.id },
+              data: { lastSeenAt: new Date(), disappearedAt: null },
+            });
+            continue;
+          }
+
+          await prisma.listing.delete({ where: { id: candidate.id } });
+          try {
+            await deleteSourceImages(candidate.images.map((image) => image.fileName));
+          } catch (error) {
+            console.warn(
+              `${marketplace} ${candidate.externalId}: запись удалена, но фото не очищены — ${error instanceof Error ? error.message : error}`,
+            );
+          }
+          counters.disappeared += 1;
+        }
+      } else {
+        const gone = await prisma.listing.updateMany({
+          where: {
+            marketplace,
+            gameId,
+            externalId: { notIn: seenIds },
+            disappearedAt: null,
+          },
+          data: { disappearedAt: new Date() },
+        });
+        counters.disappeared = gone.count;
+      }
+
+      await prisma.seller.deleteMany({ where: { listings: { none: {} } } });
     }
 
     const finishedAt = new Date();

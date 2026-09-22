@@ -3,11 +3,8 @@ import type { CurrencyCode } from '@gamestock/domain';
 export const APP_NAME = 'GameStock';
 export const APP_VERSION = '0.1.0';
 
-/** Scraping cadence of the future collector, in hours. */
+/** Automatic collection runs once per day when enabled. */
 export const SCAN_INTERVAL_HOURS = 24;
-
-/** Hour of the day (local) at which the daily collection runs. */
-export const SCAN_HOUR = 8;
 
 export const SUPPORTED_CURRENCIES: CurrencyCode[] = ['USD', 'EUR', 'RUB'];
 export const DEFAULT_BASE_CURRENCY: CurrencyCode = 'USD';

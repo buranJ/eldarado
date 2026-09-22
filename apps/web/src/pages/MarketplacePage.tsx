@@ -278,7 +278,7 @@ export function MarketplacePage() {
               value={lastRun ? formatNumber(lastRun.passed) : '—'}
             />
             <MetaItem
-              label="Исчезло:"
+              label="Удалено:"
               value={lastRun ? formatNumber(lastRun.disappeared) : '—'}
             />
           </>

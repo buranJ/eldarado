@@ -1,14 +1,14 @@
 import { useLocation } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Switch } from '@/components/ui/Switch';
 import { NAV_ITEMS } from '@/config/navigation';
 import { getGame } from '@/config/games';
 import { useAppState } from '@/app/providers/app-state-context';
 import { useToast } from '@/app/providers/toast-context';
 import { useSync } from '@/hooks/useSync';
 import { useNow } from '@/hooks/useNow';
-import { SCAN_HOUR } from '@/config/app';
-import { formatDuration, formatTime, isToday, nextDailyRun } from '@/utils/date';
+import { formatDuration, formatTime, isToday } from '@/utils/date';
 import { formatNumber } from '@/utils/format';
 import { cn } from '@/utils/cn';
 
@@ -31,9 +31,10 @@ export function Topbar() {
   const lastRun = sync.status?.lastRun ?? null;
   const busy = sync.triggering || (sync.status?.running ?? false);
   const offline = sync.error !== null;
-
-  /* The collector runs on a fixed daily cron, not "last run + 24h". */
-  const nextRunIn = (nextDailyRun(SCAN_HOUR, now).getTime() - now) / 3_600_000;
+  const autoSyncEnabled = sync.status?.autoSyncEnabled ?? false;
+  const nextRunIn = sync.status?.nextRunAt
+    ? Math.max(0, (new Date(sync.status.nextRunAt).getTime() - now) / 3_600_000)
+    : null;
 
   const onRefresh = async () => {
     const result = await sync.run(gameId);
@@ -45,10 +46,23 @@ export function Topbar() {
         title: 'Сбор завершён',
         description:
           `Увидено ${formatNumber(seen)} · новых ${formatNumber(created)} · ` +
-          `прошло фильтр ${formatNumber(passed)} · исчезло ${formatNumber(disappeared)}`,
+          `прошло фильтр ${formatNumber(passed)} · удалено ${formatNumber(disappeared)}`,
       });
     } else {
       toast.push({ tone: 'error', title: 'Сбор не удался', description: result.message });
+    }
+  };
+
+  const onAutoSyncChange = async (enabled: boolean) => {
+    const result = await sync.setAutoSync(enabled);
+    if (result.ok) {
+      toast.push({
+        tone: 'success',
+        title: enabled ? 'Автосбор включён' : 'Автосбор выключен',
+        description: enabled ? 'Следующий сбор пройдёт автоматически в 08:00.' : undefined,
+      });
+    } else {
+      toast.push({ tone: 'error', title: 'Не удалось изменить автосбор', description: result.message });
     }
   };
 
@@ -93,9 +107,20 @@ export function Topbar() {
                 : 'не выполнялся'}
             </span>
           </span>
-          <span className="text-ink-3">
-            Следующий сбор через <span className="text-ink-2">{formatDuration(nextRunIn)}</span>
-          </span>
+          <label className="flex items-center gap-2 text-ink-3" title="Ежедневный сбор в 08:00">
+            <span>Автосбор</span>
+            <Switch
+              label="Автоматический ежедневный сбор"
+              checked={autoSyncEnabled}
+              disabled={sync.updatingAutoSync || offline}
+              onChange={onAutoSyncChange}
+            />
+          </label>
+          {autoSyncEnabled && nextRunIn !== null ? (
+            <span className="text-ink-3">
+              Следующий сбор через <span className="text-ink-2">{formatDuration(nextRunIn)}</span>
+            </span>
+          ) : null}
         </div>
 
         <Button

@@ -21,16 +21,16 @@ app.get('/api/health', async () => {
 });
 
 registerListingRoutes(app);
-registerSyncRoutes(app);
+const scheduler = await startScheduler((message) => app.log.info(message));
+registerSyncRoutes(app, scheduler);
 registerAnalysisRoutes(app);
 registerDecisionRoutes(app);
 registerInventoryRoutes(app);
 registerOverviewRoutes(app);
 registerDestinationRoutes(app);
 
-startScheduler((message) => app.log.info(message));
-
 const shutdown = async (): Promise<void> => {
+  await scheduler.destroy();
   await app.close();
   await prisma.$disconnect();
   process.exit(0);

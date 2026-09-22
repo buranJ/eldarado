@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
-import { collect, toDomain } from '../pipeline/collect.js';
+import { toDomain } from '../pipeline/collect.js';
+import { isCollectionRunning, startCollection } from '../pipeline/sync-runner.js';
+import type { SyncScheduler } from '../scheduler.js';
 
-let running: Promise<unknown> | null = null;
-
-export const registerSyncRoutes = (app: FastifyInstance): void => {
+export const registerSyncRoutes = (app: FastifyInstance, scheduler: SyncScheduler): void => {
   app.get('/api/sync/status', async (request) => {
     const { gameId = 'clash-royale' } = request.query as { gameId?: string };
     const last = await prisma.collectionRun.findFirst({
@@ -12,9 +12,18 @@ export const registerSyncRoutes = (app: FastifyInstance): void => {
       orderBy: { startedAt: 'desc' },
     });
     return {
-      running: running !== null,
+      running: isCollectionRunning(),
       lastRun: last ? toDomain(last) : null,
+      ...scheduler.status(),
     };
+  });
+
+  app.patch('/api/sync/auto', async (request, reply) => {
+    const { enabled } = (request.body ?? {}) as { enabled?: unknown };
+    if (typeof enabled !== 'boolean') {
+      return reply.code(400).send({ error: 'Поле enabled должно быть логическим значением' });
+    }
+    return scheduler.setEnabled(enabled);
   });
 
   app.get('/api/sync/runs', async (request) => {
@@ -28,11 +37,13 @@ export const registerSyncRoutes = (app: FastifyInstance): void => {
   });
 
   app.post('/api/sync/run', async (request, reply) => {
-    if (running) return reply.code(409).send({ error: 'Сбор уже выполняется' });
     const body = (request.body ?? {}) as { gameId?: string; marketplace?: string };
-    running = collect({ gameId: body.gameId, marketplace: body.marketplace }).finally(() => {
-      running = null;
+    const running = startCollection({
+      gameId: body.gameId,
+      marketplace: body.marketplace,
+      pruneMissing: true,
     });
+    if (!running) return reply.code(409).send({ error: 'Сбор уже выполняется' });
     try {
       return await running;
     } catch (error) {
