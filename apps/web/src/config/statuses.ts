@@ -45,6 +45,7 @@ export const LISTING_STATUS: Record<ListingStatus, StatusDef> = {
   paused: { label: 'Приостановлено', tone: 'warn' },
   sold: { label: 'Продано', tone: 'accent' },
   error: { label: 'Ошибка', tone: 'neg' },
+  deleted: { label: 'Удалено', tone: 'muted' },
 };
 
 export const SALE_STATUS: Record<SaleStatus, StatusDef> = {

@@ -4,16 +4,15 @@ import {
   ArrowUpRight,
   Megaphone,
   MoreHorizontal,
-  Pause,
-  Play,
-  Upload,
+  Trash2,
 } from 'lucide-react';
 import { PageHeader, MetaItem } from '@/components/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { Tabs } from '@/components/ui/Tabs';
 import type { TabItem } from '@/components/ui/Tabs';
-import { IconButton } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
+import { Modal } from '@/components/ui/Modal';
 import { SearchInput } from '@/components/ui/Field';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
@@ -23,36 +22,49 @@ import { MarketplaceBadge } from '@/components/MarketplaceBadge';
 import { AccountCell } from '@/features/accounts/AccountCell';
 import { ConnectionStatus } from '@/features/listings/ConnectionStatus';
 import { useAppState } from '@/app/providers/app-state-context';
-import { useSimulatedLoading } from '@/hooks/useSimulatedLoading';
+import { useToast } from '@/app/providers/toast-context';
+import { useQuery } from '@/hooks/useQuery';
 import { useTableSort } from '@/hooks/useTableSort';
 import type { SortAccessor } from '@/hooks/useTableSort';
-import { buildListingUrl, destinationMarketplaces } from '@/config/marketplaces';
+import { api } from '@/api/client';
+import { buildListingUrl } from '@/config/marketplaces';
 import { formatMoney, sumMoney } from '@/utils/money';
 import { formatDateTime } from '@/utils/date';
 import { formatNumber } from '@/utils/format';
 import type { ListingStatus, MarketplaceListing } from '@gamestock/domain';
 
+const EMPTY_LISTINGS: MarketplaceListing[] = [];
+
 type TabValue = 'all' | ListingStatus;
 
 export function ListingsPage() {
   const state = useAppState();
-  const loading = useSimulatedLoading([state.gameId]);
+  const toast = useToast();
+  const listings = useQuery(
+    () => api.eldoradoListings(state.gameId),
+    [state.gameId, state.dataVersion],
+  );
+  const connection = useQuery(() => api.eldoradoStatus(), []);
 
   const [tab, setTab] = useState<TabValue>('all');
   const [search, setSearch] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<MarketplaceListing | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const rows = listings.data?.items ?? EMPTY_LISTINGS;
 
   const counts = useMemo(() => {
     const base: Record<TabValue, number> = {
-      all: state.listings.length,
+      all: rows.length,
       draft: 0,
       published: 0,
       paused: 0,
       sold: 0,
       error: 0,
+      deleted: 0,
     };
-    for (const listing of state.listings) base[listing.status] += 1;
+    for (const listing of rows) base[listing.status] += 1;
     return base;
-  }, [state.listings]);
+  }, [rows]);
 
   const tabs: TabItem<TabValue>[] = [
     { value: 'all', label: 'Все', count: counts.all },
@@ -61,18 +73,19 @@ export function ListingsPage() {
     { value: 'paused', label: 'Приостановлены', count: counts.paused },
     { value: 'sold', label: 'Проданы', count: counts.sold },
     { value: 'error', label: 'Ошибка', count: counts.error },
+    { value: 'deleted', label: 'Удалены', count: counts.deleted },
   ];
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return state.listings.filter((listing) => {
+    return rows.filter((listing) => {
       if (tab !== 'all' && listing.status !== tab) return false;
       if (!query) return true;
       return `${listing.id} ${listing.accountId} ${listing.title} ${listing.externalListingId ?? ''}`
         .toLowerCase()
         .includes(query);
     });
-  }, [state.listings, tab, search]);
+  }, [rows, tab, search]);
 
   const accessors: Record<string, SortAccessor<MarketplaceListing>> = {
     account: (row) => row.accountId,
@@ -91,12 +104,36 @@ export function ListingsPage() {
   const activeValue = useMemo(
     () =>
       sumMoney(
-        state.listings
+        rows
           .filter((listing) => listing.status === 'published')
           .map((listing) => listing.sellPrice),
       ),
-    [state.listings],
+    [rows],
   );
+
+  const deleteListing = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.deleteEldoradoListing(deleteTarget.inventoryItemId);
+      toast.push({
+        tone: 'success',
+        title: 'Объявление удалено',
+        description: `Лот ${deleteTarget.externalListingId ?? ''} удалён с Eldorado.`,
+      });
+      setDeleteTarget(null);
+      listings.refetch();
+      state.notifyDataChanged();
+    } catch (error) {
+      toast.push({
+        tone: 'error',
+        title: 'Не удалось удалить объявление',
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: Column<MarketplaceListing>[] = [
     {
@@ -121,7 +158,7 @@ export function ListingsPage() {
       render: (row) =>
         row.externalListingId ? (
           <a
-            href={buildListingUrl(row.marketplace, row.externalListingId)}
+            href={row.url ?? buildListingUrl(row.marketplace, row.externalListingId)}
             target="_blank"
             rel="noreferrer noopener"
             onClick={(event) => event.stopPropagation()}
@@ -196,26 +233,12 @@ export function ListingsPage() {
           <DropdownMenu
             items={[
               {
-                key: 'publish',
-                label: 'Опубликовать',
-                icon: Upload,
-                tone: 'success',
-                disabled: row.status === 'published' || row.status === 'sold',
-                onSelect: () => state.setListingStatus(row.id, 'published'),
-              },
-              {
-                key: 'pause',
-                label: 'Приостановить',
-                icon: Pause,
-                disabled: row.status !== 'published',
-                onSelect: () => state.setListingStatus(row.id, 'paused'),
-              },
-              {
-                key: 'resume',
-                label: 'Возобновить',
-                icon: Play,
-                disabled: row.status !== 'paused',
-                onSelect: () => state.setListingStatus(row.id, 'published'),
+                key: 'delete',
+                label: 'Удалить с Eldorado',
+                icon: Trash2,
+                tone: 'danger',
+                disabled: !row.externalListingId || row.status === 'deleted',
+                onSelect: () => setDeleteTarget(row),
               },
             ]}
             trigger={({ toggle: toggleMenu }) => (
@@ -234,7 +257,7 @@ export function ListingsPage() {
         subtitle="Подготовленные и опубликованные лоты на площадках продажи"
         meta={
           <>
-            <MetaItem label="Всего объявлений:" value={formatNumber(state.listings.length)} />
+            <MetaItem label="Всего объявлений:" value={formatNumber(rows.length)} />
             <MetaItem label="Активных:" value={formatNumber(counts.published)} tone="pos" />
             <MetaItem label="Сумма активных лотов:" value={formatMoney(activeValue)} />
           </>
@@ -249,27 +272,69 @@ export function ListingsPage() {
         }
       />
 
-      <ConnectionStatus ids={destinationMarketplaces().map((m) => m.id)} />
+      <ConnectionStatus
+        id="eldorado"
+        connection={connection.data?.configured ? 'connected' : 'not_connected'}
+      />
 
       <Panel className="overflow-hidden">
         <Tabs items={tabs} value={tab} onChange={setTab} />
-        <DataTable
-          columns={columns}
-          rows={sorted}
-          rowKey={(row) => row.id}
-          sort={sort}
-          onSortToggle={toggle}
-          loading={loading}
-          minWidth={1186}
-          empty={
-            <EmptyState
-              icon={Megaphone}
-              title="Объявлений нет"
-              description="Подготовьте позицию в инвентаре, чтобы создать черновик объявления."
-            />
-          }
-        />
+        {listings.error ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="Не удалось загрузить объявления"
+            description={listings.error}
+            action={<Button onClick={listings.refetch}>Повторить</Button>}
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={sorted}
+            rowKey={(row) => row.id}
+            sort={sort}
+            onSortToggle={toggle}
+            loading={listings.loading}
+            minWidth={1186}
+            empty={
+              <EmptyState
+                icon={Megaphone}
+                title="Объявлений нет"
+                description="Опубликуйте аккаунт из инвентаря — созданный лот появится здесь."
+              />
+            }
+          />
+        )}
       </Panel>
+
+      <Modal
+        open={deleteTarget !== null}
+        onClose={deleting ? () => undefined : () => setDeleteTarget(null)}
+        title="Удалить объявление с Eldorado?"
+        description={
+          deleteTarget?.externalListingId
+            ? `Лот ${deleteTarget.externalListingId} исчезнет с площадки.`
+            : undefined
+        }
+        footer={
+          <>
+            <Button onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Отмена
+            </Button>
+            <Button
+              variant="danger"
+              icon={Trash2}
+              onClick={() => void deleteListing()}
+              disabled={deleting}
+            >
+              {deleting ? 'Удаление…' : 'Удалить'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[12px] leading-relaxed text-ink-2">
+          Удалится только объявление. Сам аккаунт и история операции останутся в инвентаре.
+        </p>
+      </Modal>
     </div>
   );
 }

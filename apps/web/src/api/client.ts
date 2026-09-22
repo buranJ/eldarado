@@ -3,6 +3,7 @@ import type {
   CollectionRun,
   GameAccount,
   InventoryStatus,
+  MarketplaceListing,
   Money,
 } from '@gamestock/domain';
 
@@ -173,6 +174,11 @@ export interface HealthStatus {
   aiConfigured: boolean;
 }
 
+export interface EldoradoStatus {
+  configured: boolean;
+  mode: 'ready_to_publish' | 'not_configured';
+}
+
 export const api = {
   health: () => request<HealthStatus>('/health'),
   listings: (query: ListingQuery) => request<Page<GameAccount>>(`/listings?${toQuery(query)}`),
@@ -221,11 +227,21 @@ export const api = {
     }),
   eldoradoPreview: (id: string) =>
     request<EldoradoPublishPreview>(`/inventory/${id}/eldorado/preview`),
+  eldoradoStatus: () => request<EldoradoStatus>('/destinations/eldorado/status'),
+  eldoradoListings: (gameId: string) =>
+    request<{ items: MarketplaceListing[]; total: number }>(
+      `/destinations/eldorado/listings?gameId=${encodeURIComponent(gameId)}`,
+    ),
   publishToEldorado: (id: string, input: EldoradoPublishInput) =>
     request<EldoradoPublishResult>(`/inventory/${id}/eldorado/publish`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+  deleteEldoradoListing: (inventoryItemId: string) =>
+    request<{ deleted: true; offerId: string }>(
+      `/inventory/${inventoryItemId}/eldorado/listing`,
+      { method: 'DELETE' },
+    ),
 
   runAnalysis: (gameId: string, limit = 100) =>
     request<{ analysed: number; failed: number; skipped: number; costUsd: number }>(

@@ -11,6 +11,7 @@ import { buildDraft } from '../adapters/destination/draft.js';
 import { ExtractionSchema, toAttributeMap } from '../analysis/schema.js';
 import { prisma } from '../lib/db.js';
 import { sourceImagePath } from '../lib/source-images.js';
+import { convertMinor, DESTINATION_FEE_RATE } from '../config/marketplaces.js';
 
 const optionalField = (max: number) => z.string().max(max).optional();
 
@@ -76,6 +77,53 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
     configured: eldoradoClient.configured,
     mode: eldoradoClient.configured ? 'ready_to_publish' : 'not_configured',
   }));
+
+  app.get('/api/destinations/eldorado/listings', async (request) => {
+    const { gameId = 'clash-royale' } = request.query as { gameId?: string };
+    const rows = await prisma.marketplaceListing.findMany({
+      where: { gameId, marketplace: 'eldorado' },
+      include: { item: { include: { listing: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      items: rows.map((row) => {
+        const purchaseInSaleCurrency = convertMinor(
+          row.purchaseMinor,
+          row.purchaseCurrency,
+          row.currency,
+        );
+        const expectedProfitMinor = Math.round(
+          row.sellMinor * (1 - DESTINATION_FEE_RATE) - purchaseInSaleCurrency,
+        );
+        const game = ELDORADO_ACCOUNT_GAMES[row.gameId];
+        return {
+          id: row.id,
+          inventoryItemId: row.itemId,
+          accountId: row.item.listing.externalId,
+          gameId: row.gameId,
+          title: row.title,
+          marketplace: row.marketplace,
+          externalListingId: row.externalId,
+          url: row.externalId && game ? eldoradoOfferUrl(game.seoAlias, row.externalId) : null,
+          sellPrice: { amount: row.sellMinor / 100, currency: row.currency },
+          purchasePrice: {
+            amount: row.purchaseMinor / 100,
+            currency: row.purchaseCurrency,
+          },
+          expectedProfit: {
+            amount: expectedProfitMinor / 100,
+            currency: row.currency,
+          },
+          status: row.status,
+          createdAt: row.createdAt.toISOString(),
+          publishedAt: row.publishedAt?.toISOString() ?? null,
+          errorMessage: row.error,
+        };
+      }),
+      total: rows.length,
+    };
+  });
 
   /**
    * A deliberate read-only verification endpoint. Creation and other mutations
@@ -248,7 +296,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
         });
         await tx.inventoryItem.update({
           where: { id: item.id },
-          data: { status: 'ready_to_list' },
+          data: { status: 'purchased' },
         });
         await tx.activityEvent.create({
           data: {

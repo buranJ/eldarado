@@ -2,7 +2,7 @@ import type { Money } from './common';
 import type { GameId } from './game';
 import type { MarketplaceId } from './marketplace';
 
-export type ListingStatus = 'draft' | 'published' | 'paused' | 'sold' | 'error';
+export type ListingStatus = 'draft' | 'published' | 'paused' | 'sold' | 'error' | 'deleted';
 
 export interface MarketplaceListing {
   id: string;
@@ -13,6 +13,7 @@ export interface MarketplaceListing {
   marketplace: MarketplaceId;
   /** ID assigned by the destination marketplace once published. */
   externalListingId: string | null;
+  url?: string | null;
   sellPrice: Money;
   purchasePrice: Money;
   expectedProfit: Money;

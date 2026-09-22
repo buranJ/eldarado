@@ -4,17 +4,10 @@ import { AppStateContext } from './app-state-context';
 import type { AppStateApi } from './app-state-context';
 import { useToast } from './toast-context';
 import { api } from '@/api/client';
-import { LISTINGS_FIXTURE } from '@/data/listings';
 import { SALES_FIXTURE } from '@/data/sales';
 import { DEFAULT_GAME_ID } from '@/config/games';
 import { DEFAULT_BASE_CURRENCY } from '@/config/app';
-import type {
-  CurrencyCode,
-  GameId,
-  InventoryStatus,
-  ListingStatus,
-  MarketplaceListing,
-} from '@gamestock/domain';
+import type { CurrencyCode, GameId, InventoryStatus } from '@gamestock/domain';
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
@@ -22,7 +15,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [gameId, setGameId] = useState<GameId>(DEFAULT_GAME_ID);
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(DEFAULT_BASE_CURRENCY);
   const [dataVersion, setDataVersion] = useState(0);
-  const [listings, setListings] = useState<MarketplaceListing[]>(() => LISTINGS_FIXTURE);
   const [sales] = useState(() => SALES_FIXTURE);
 
   const notifyDataChanged = useCallback(() => setDataVersion((value) => value + 1), []);
@@ -140,28 +132,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
-  /* Listings still live in fixtures until the destination marketplace is wired up. */
-  const setListingStatus = useCallback(
-    (listingId: string, status: ListingStatus) => {
-      setListings((current) =>
-        current.map((listing) =>
-          listing.id === listingId
-            ? {
-                ...listing,
-                status,
-                publishedAt:
-                  status === 'published'
-                    ? (listing.publishedAt ?? new Date().toISOString())
-                    : listing.publishedAt,
-              }
-            : listing,
-        ),
-      );
-      toast.push({ tone: 'success', title: 'Статус объявления обновлён' });
-    },
-    [toast],
-  );
-
   const value = useMemo<AppStateApi>(
     () => ({
       gameId,
@@ -177,9 +147,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       purchaseAccount,
       setManualPrice,
       setInventoryStatus,
-      listings: listings.filter((listing) => listing.gameId === gameId),
       sales: sales.filter((sale) => sale.gameId === gameId),
-      setListingStatus,
     }),
     [
       gameId,
@@ -193,9 +161,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       purchaseAccount,
       setManualPrice,
       setInventoryStatus,
-      listings,
       sales,
-      setListingStatus,
     ],
   );
 
