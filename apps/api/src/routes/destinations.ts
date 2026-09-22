@@ -140,34 +140,44 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
 
     let remoteError: string | null = null;
     let remoteOffers: Awaited<ReturnType<typeof eldoradoClient.listOffers>> = [];
+    let accountGames: Awaited<ReturnType<typeof eldoradoClient.listAccountGames>> = [];
     try {
       remoteOffers = await eldoradoClient.listOffers();
     } catch (error) {
       remoteError = error instanceof Error ? error.message : String(error);
     }
+    try {
+      accountGames = await eldoradoClient.listAccountGames();
+    } catch (error) {
+      remoteError ??= error instanceof Error ? error.message : String(error);
+    }
 
     const localIds = new Set(rows.map((row) => row.externalId).filter(Boolean));
+    const gamesById = new Map(accountGames.map((game) => [game.gameId, game]));
     const externalItems = remoteOffers
       .filter((offer) => !localIds.has(offer.id))
-      .map((offer) => ({
-        id: `eldorado:${offer.id}`,
-        inventoryItemId: null,
-        accountId: 'Внешний лот',
-        gameId: `eldorado-${offer.gameId}`,
-        gameLabel: `Eldorado · игра ${offer.gameId}`,
-        title: offer.title,
-        marketplace: 'eldorado',
-        source: 'eldorado' as const,
-        externalListingId: offer.id,
-        url: null,
-        sellPrice: offer.price,
-        purchasePrice: null,
-        expectedProfit: null,
-        status: eldoradoState(offer.state),
-        createdAt: null,
-        publishedAt: null,
-        errorMessage: null,
-      }));
+      .map((offer) => {
+        const game = gamesById.get(offer.gameId);
+        return {
+          id: `eldorado:${offer.id}`,
+          inventoryItemId: null,
+          accountId: 'Внешний лот',
+          gameId: `eldorado-${offer.gameId}`,
+          gameLabel: game?.gameName ?? `Игра Eldorado ${offer.gameId}`,
+          title: offer.title,
+          marketplace: 'eldorado',
+          source: 'eldorado' as const,
+          externalListingId: offer.id,
+          url: game ? eldoradoOfferUrl(game.seoAlias, offer.id) : null,
+          sellPrice: offer.price,
+          purchasePrice: null,
+          expectedProfit: null,
+          status: eldoradoState(offer.state),
+          createdAt: null,
+          publishedAt: null,
+          errorMessage: null,
+        };
+      });
 
     const items = [...externalItems, ...localItems];
     return {

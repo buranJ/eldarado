@@ -6,6 +6,7 @@ import type {
 
 const API_ORIGIN = 'https://www.eldorado.gg';
 const TOKEN_SAFETY_WINDOW_MS = 30_000;
+const OFFERS_PAGE_SIZE = 50;
 
 interface TokenResponse {
   accessToken: string;
@@ -20,6 +21,20 @@ export interface EldoradoOfferSummary {
   category: string;
   state: string;
   price: { amount: number; currency: string } | null;
+}
+
+export interface EldoradoAccountGame {
+  gameId: string;
+  gameName: string;
+  seoAlias: string;
+}
+
+interface OfferPage {
+  pageIndex: number;
+  totalPages: number;
+  recordCount: number;
+  pageSize: number;
+  results: unknown[];
 }
 
 export class EldoradoApiError extends Error {
@@ -48,6 +63,7 @@ const errorMessage = async (response: Response): Promise<string> => {
  */
 export class EldoradoClient {
   private token: { value: string; expiresAt: number } | null = null;
+  private accountGamesPromise: Promise<EldoradoAccountGame[]> | null = null;
 
   get configured(): boolean {
     return env.eldoradoClientId !== null && env.eldoradoClientSecret !== null;
@@ -105,17 +121,7 @@ export class EldoradoClient {
     return (text ? JSON.parse(text) : undefined) as T;
   }
 
-  /** Read-only smoke test. It proves the credentials work without mutating the seller account. */
-  async listOffers(): Promise<EldoradoOfferSummary[]> {
-    const body = await this.request<unknown>('/api/flexibleOffers/me/search');
-    const candidates = Array.isArray(body)
-      ? body
-      : typeof body === 'object' && body !== null && 'items' in body && Array.isArray(body.items)
-        ? body.items
-        : typeof body === 'object' && body !== null && 'results' in body && Array.isArray(body.results)
-          ? body.results
-        : [];
-
+  private parseOffers(candidates: unknown[]): EldoradoOfferSummary[] {
     return candidates.flatMap((value) => {
       if (typeof value !== 'object' || value === null) return [];
       const offer = value as Record<string, unknown>;
@@ -141,6 +147,86 @@ export class EldoradoClient {
         },
       ];
     });
+  }
+
+  private parseOfferPage(body: unknown): OfferPage {
+    if (Array.isArray(body)) {
+      return {
+        pageIndex: 1,
+        totalPages: 1,
+        recordCount: body.length,
+        pageSize: body.length,
+        results: body,
+      };
+    }
+    if (typeof body !== 'object' || body === null) {
+      throw new EldoradoApiError('Eldorado вернул некорректный список объявлений', 502);
+    }
+    const record = body as Record<string, unknown>;
+    const results = Array.isArray(record.results)
+      ? record.results
+      : Array.isArray(record.items)
+        ? record.items
+        : [];
+    return {
+      pageIndex: typeof record.pageIndex === 'number' ? record.pageIndex : 1,
+      totalPages: typeof record.totalPages === 'number' ? record.totalPages : 1,
+      recordCount: typeof record.recordCount === 'number' ? record.recordCount : results.length,
+      pageSize: typeof record.pageSize === 'number' ? record.pageSize : results.length,
+      results,
+    };
+  }
+
+  /** Loads every page of the seller's offers instead of Eldorado's default first 10 rows. */
+  async listOffers(): Promise<EldoradoOfferSummary[]> {
+    const first = this.parseOfferPage(
+      await this.request<unknown>(
+        `/api/flexibleOffers/me/search?pageIndex=1&pageSize=${OFFERS_PAGE_SIZE}`,
+      ),
+    );
+    const totalPages = Math.min(Math.max(first.totalPages, 1), 100);
+    const remaining = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) =>
+        this.request<unknown>(
+          `/api/flexibleOffers/me/search?pageIndex=${index + 2}&pageSize=${OFFERS_PAGE_SIZE}`,
+        ).then((body) => this.parseOfferPage(body)),
+      ),
+    );
+    return this.parseOffers([first, ...remaining].flatMap((page) => page.results));
+  }
+
+  /** Public Eldorado catalogue used to resolve stable game IDs into names and URLs. */
+  async listAccountGames(): Promise<EldoradoAccountGame[]> {
+    if (!this.accountGamesPromise) {
+      this.accountGamesPromise = fetch(`${API_ORIGIN}/api/library`)
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new EldoradoApiError(await errorMessage(response), response.status);
+          }
+          const body = (await response.json()) as unknown;
+          if (!Array.isArray(body)) {
+            throw new EldoradoApiError('Eldorado вернул некорректный справочник игр', 502);
+          }
+          return body.flatMap((value): EldoradoAccountGame[] => {
+            if (typeof value !== 'object' || value === null) return [];
+            const game = value as Record<string, unknown>;
+            if (
+              game.category !== 'Account' ||
+              typeof game.gameId !== 'string' ||
+              typeof game.gameName !== 'string' ||
+              typeof game.seoAlias !== 'string'
+            ) {
+              return [];
+            }
+            return [{ gameId: game.gameId, gameName: game.gameName, seoAlias: game.seoAlias }];
+          });
+        })
+        .catch((error) => {
+          this.accountGamesPromise = null;
+          throw error;
+        });
+    }
+    return this.accountGamesPromise;
   }
 
   /** Uploads one offer image and converts Eldorado's file response to OfferImageDTO. */

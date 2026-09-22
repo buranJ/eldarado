@@ -13,7 +13,7 @@ import type { TabItem } from '@/components/ui/Tabs';
 import { Button, IconButton } from '@/components/ui/Button';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Modal } from '@/components/ui/Modal';
-import { SearchInput } from '@/components/ui/Field';
+import { SearchInput, Select } from '@/components/ui/Field';
 import { DataTable } from '@/components/DataTable';
 import type { Column } from '@/components/DataTable';
 import { EmptyState } from '@/components/EmptyState';
@@ -42,15 +42,23 @@ export function ListingsPage() {
   const toast = useToast();
   const listings = useQuery(
     () => api.eldoradoListings(),
-    [state.gameId, state.dataVersion],
+    [state.dataVersion],
   );
   const connection = useQuery(() => api.eldoradoStatus(), []);
 
   const [tab, setTab] = useState<TabValue>('all');
+  const [gameFilter, setGameFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<MarketplaceListing | null>(null);
   const [deleting, setDeleting] = useState(false);
   const rows = listings.data?.items ?? EMPTY_LISTINGS;
+  const games = useMemo(
+    () =>
+      [...new Map(rows.map((row) => [row.gameId, row.gameLabel ?? row.gameId])).entries()].sort(
+        ([, left], [, right]) => left.localeCompare(right, 'ru'),
+      ),
+    [rows],
+  );
 
   const counts = useMemo(() => {
     const base: Record<TabValue, number> = {
@@ -80,12 +88,13 @@ export function ListingsPage() {
     const query = search.trim().toLowerCase();
     return rows.filter((listing) => {
       if (tab !== 'all' && listing.status !== tab) return false;
+      if (gameFilter !== 'all' && listing.gameId !== gameFilter) return false;
       if (!query) return true;
-      return `${listing.id} ${listing.accountId} ${listing.title} ${listing.externalListingId ?? ''}`
+      return `${listing.id} ${listing.accountId} ${listing.gameLabel ?? ''} ${listing.title} ${listing.externalListingId ?? ''}`
         .toLowerCase()
         .includes(query);
     });
-  }, [rows, tab, search]);
+  }, [rows, tab, gameFilter, search]);
 
   const accessors: Record<string, SortAccessor<MarketplaceListing>> = {
     account: (row) => row.accountId,
@@ -164,6 +173,12 @@ export function ListingsPage() {
         ) : (
           <AccountCell id={row.accountId} title={row.title} gameId={row.gameId} />
         ),
+    },
+    {
+      key: 'game',
+      header: 'Игра',
+      width: 180,
+      render: (row) => <span className="text-[11.5px] text-ink-2">{row.gameLabel ?? row.gameId}</span>,
     },
     {
       key: 'marketplace',
@@ -288,12 +303,23 @@ export function ListingsPage() {
           </>
         }
         actions={
-          <SearchInput
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Поиск по объявлениям"
-            className="w-[240px]"
-          />
+          <>
+            <Select
+              value={gameFilter}
+              onChange={(event) => setGameFilter(event.target.value)}
+              className="w-[220px]"
+              options={[
+                { value: 'all', label: 'Все игры' },
+                ...games.map(([value, label]) => ({ value, label })),
+              ]}
+            />
+            <SearchInput
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Поиск по объявлениям"
+              className="w-[240px]"
+            />
+          </>
         }
       />
 
@@ -325,7 +351,7 @@ export function ListingsPage() {
             sort={sort}
             onSortToggle={toggle}
             loading={listings.loading}
-            minWidth={1186}
+            minWidth={1366}
             empty={
               <EmptyState
                 icon={Megaphone}
