@@ -9,7 +9,7 @@ import type {
 } from '@/api/client';
 import { useToast } from '@/app/providers/toast-context';
 import { Button } from '@/components/ui/Button';
-import { Checkbox, FieldLabel, Select, TextInput } from '@/components/ui/Field';
+import { FieldLabel, Select, TextInput } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { toBase } from '@/utils/money';
 
@@ -62,8 +62,6 @@ export function EldoradoPublishModal({
   const [mfaLogin, setMfaLogin] = useState('');
   const [mfaPassword, setMfaPassword] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [rulesAccepted, setRulesAccepted] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -95,10 +93,6 @@ export function EldoradoPublishModal({
     if (!accountLogin.trim() || !accountPassword) {
       return setError('Укажите логин и пароль игрового аккаунта');
     }
-    if (!termsAccepted || !rulesAccepted) {
-      return setError('Нужно подтвердить правила Eldorado');
-    }
-
     setSubmitting(true);
     try {
       const imageInput = image
@@ -150,22 +144,31 @@ export function EldoradoPublishModal({
       footer={
         result ? (
           <>
-            <Button onClick={onClose}>Закрыть</Button>
+            <Button size="md" className="h-10 px-5 text-[14px]" onClick={onClose}>Закрыть</Button>
             <a
               href={result.url}
               target="_blank"
               rel="noreferrer noopener"
-              className="inline-flex h-7 items-center gap-1.5 rounded-md bg-accent px-2.5 text-[12px] font-medium text-[#0b1024]"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-5 text-[14px] font-medium text-[#0b1024]"
             >
               Открыть лот <ExternalLink size={13} />
             </a>
           </>
         ) : (
           <>
-            <Button onClick={onClose} disabled={submitting}>Отмена</Button>
+            <Button
+              size="md"
+              className="h-10 px-5 text-[14px]"
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Отмена
+            </Button>
             <Button
               variant="success"
+              size="md"
               icon={Upload}
+              className="h-10 px-5 text-[14px]"
               onClick={() => void submit()}
               disabled={submitting || loadingPreview || !preview}
             >
@@ -292,9 +295,10 @@ export function EldoradoPublishModal({
               <textarea className={textareaClass} rows={3} value={additionalInfo} onChange={(e) => setAdditionalInfo(e.target.value)} />
             </FormField>
 
-            <div className="space-y-2 border-t border-line pt-4">
-              <Checkbox label="Я принимаю Terms of Service Eldorado" checked={termsAccepted} onChange={setTermsAccepted} />
-              <Checkbox label="Я принимаю Seller Rules и Account Seller Rules" checked={rulesAccepted} onChange={setRulesAccepted} />
+            <div className="rounded-lg border border-[#594b25] bg-[#251f12] p-3 text-[11.5px] leading-relaxed text-[#e1ca82]">
+              Нажимая «Опубликовать лот», вы подтверждаете принятие Terms of Service
+              Eldorado, Seller Rules и Account Seller Rules. Лот будет создан сразу после
+              нажатия кнопки.
             </div>
           </>
         )}
