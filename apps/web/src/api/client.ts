@@ -301,7 +301,7 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ gameId, limit }) },
     ),
   runSync: (gameId: string) =>
-    request<CollectionRun>('/sync/run', {
+    request<{ started: true }>('/sync/run', {
       method: 'POST',
       body: JSON.stringify({ gameId }),
     }),

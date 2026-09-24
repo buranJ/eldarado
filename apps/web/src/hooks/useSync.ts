@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/api/client';
 import type { SyncStatus } from '@/api/client';
-import type { CollectionRun } from '@gamestock/domain';
 
 const POLL_MS = 15_000;
 
@@ -38,14 +37,12 @@ export const useSync = (gameId: string) => {
   }, [load]);
 
   const run = useCallback(
-    async (
-      gameId: string,
-    ): Promise<{ ok: true; run: CollectionRun } | { ok: false; message: string }> => {
+    async (gameId: string): Promise<{ ok: true } | { ok: false; message: string }> => {
       setTriggering(true);
       try {
-        const completed = await api.runSync(gameId);
+        await api.runSync(gameId);
         await load();
-        return { ok: true, run: completed };
+        return { ok: true };
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : String(cause);
         setError(message);

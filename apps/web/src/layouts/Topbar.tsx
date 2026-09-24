@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -28,6 +29,7 @@ export function Topbar() {
   const sync = useSync(gameId);
   const now = useNow();
   const canCollect = game.collectionEnabled;
+  const wasRunning = useRef(false);
 
   const lastRun = sync.status?.lastRun ?? null;
   const busy = sync.triggering || (sync.status?.running ?? false);
@@ -37,18 +39,38 @@ export function Topbar() {
     ? Math.max(0, (new Date(sync.status.nextRunAt).getTime() - now) / 3_600_000)
     : null;
 
+  useEffect(() => {
+    if (!sync.status) return;
+    if (wasRunning.current && !sync.status.running) {
+      notifyDataChanged();
+      const completed = sync.status.lastRun;
+      if (completed?.status === 'ok') {
+        toast.push({
+          tone: 'success',
+          title: 'Сбор завершён',
+          description:
+            `Увидено ${formatNumber(completed.seen)} · новых ${formatNumber(completed.created)} · ` +
+            `прошло фильтр ${formatNumber(completed.passed)} · удалено ${formatNumber(completed.disappeared)}`,
+        });
+      } else if (completed?.status === 'failed') {
+        toast.push({
+          tone: 'error',
+          title: 'Сбор не удался',
+          description: completed.error ?? 'Неизвестная ошибка сбора',
+        });
+      }
+    }
+    wasRunning.current = sync.status.running;
+  }, [notifyDataChanged, sync.status, toast]);
+
   const onRefresh = async () => {
     if (!canCollect) return;
     const result = await sync.run(gameId);
     if (result.ok) {
-      notifyDataChanged();
-      const { seen, created, passed, disappeared } = result.run;
       toast.push({
-        tone: 'success',
-        title: 'Сбор завершён',
-        description:
-          `Увидено ${formatNumber(seen)} · новых ${formatNumber(created)} · ` +
-          `прошло фильтр ${formatNumber(passed)} · удалено ${formatNumber(disappeared)}`,
+        tone: 'info',
+        title: 'Сбор запущен',
+        description: 'Можно продолжать работу — результат появится после завершения.',
       });
     } else {
       toast.push({ tone: 'error', title: 'Сбор не удался', description: result.message });

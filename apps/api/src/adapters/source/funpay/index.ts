@@ -15,6 +15,7 @@ import {
 } from './config.js';
 
 let lastRequestAt = 0;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 const throttle = async (): Promise<void> => {
   const wait = MIN_REQUEST_INTERVAL_MS - (Date.now() - lastRequestAt);
@@ -29,7 +30,10 @@ const fetchPublic = async (path: string): Promise<Response> => {
     );
   }
   await throttle();
-  return fetch(`${FUNPAY_BASE}${path}`, { headers: REQUEST_HEADERS });
+  return fetch(`${FUNPAY_BASE}${path}`, {
+    headers: REQUEST_HEADERS,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
 };
 
 const fetchPath = async (path: string): Promise<string> => {
@@ -56,7 +60,10 @@ const downloadImage = async (sourceUrl: string): Promise<SourceImage | null> => 
   if (url.protocol !== 'https:' || url.hostname !== 'sfunpay.com' || !url.pathname.startsWith('/s/offer/')) {
     return null;
   }
-  const response = await fetch(url, { headers: REQUEST_HEADERS });
+  const response = await fetch(url, {
+    headers: REQUEST_HEADERS,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
   if (!response.ok) return null;
   const declaredSize = Number(response.headers.get('content-length') ?? 0);
   if (declaredSize > 10 * 1024 * 1024) return null;

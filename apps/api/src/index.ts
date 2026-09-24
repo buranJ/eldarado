@@ -46,6 +46,14 @@ app.get('/api/health', async () => {
 registerAuthRoutes(app);
 registerIntegrationRoutes(app);
 registerListingRoutes(app);
+await prisma.collectionRun.updateMany({
+  where: { status: 'running' },
+  data: {
+    status: 'failed',
+    error: 'Сбор был прерван перезапуском сервера',
+    finishedAt: new Date(),
+  },
+});
 const scheduler = await startScheduler((message) => app.log.info(message));
 registerSyncRoutes(app, scheduler);
 registerAnalysisRoutes(app);

@@ -44,12 +44,16 @@ export const registerSyncRoutes = (app: FastifyInstance, scheduler: SyncSchedule
       pruneMissing: true,
     });
     if (!running) return reply.code(409).send({ error: 'Сбор уже выполняется' });
-    try {
-      return await running;
-    } catch (error) {
-      return reply
-        .code(502)
-        .send({ error: error instanceof Error ? error.message : String(error) });
-    }
+    void running
+      .then((run) => {
+        app.log.info(
+          { gameId: run.gameId, seen: run.seen, created: run.created },
+          'Сбор завершён',
+        );
+      })
+      .catch((error: unknown) => {
+        app.log.error({ err: error }, 'Сбор завершился с ошибкой');
+      });
+    return reply.code(202).send({ started: true });
   });
 };
