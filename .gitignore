@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.codex-tmp/
 backups/
 apps/api/storage/
 *.local
@@ -18,6 +19,7 @@ apps/api/storage/
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Editor directories and files
 .vscode/*

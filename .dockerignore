@@ -1,0 +1,12 @@
+.git
+.github
+.codex-tmp
+node_modules
+**/node_modules
+**/dist
+backups
+apps/api/.env
+apps/api/storage
+*.log
+.DS_Store
+
