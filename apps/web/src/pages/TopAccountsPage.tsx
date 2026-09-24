@@ -303,7 +303,6 @@ export function TopAccountsPage() {
         meta={
           <>
             <MetaItem label="Прошли проверку:" value={formatNumber(qualified.data?.total ?? 0)} tone="pos" />
-            <MetaItem label="Режим:" value="Без AI-анализа" />
             <MetaItem label="Порядок:" value="Сначала новые" />
           </>
         }
