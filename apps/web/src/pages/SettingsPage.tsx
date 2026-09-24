@@ -179,7 +179,6 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[12.5px] font-medium text-ink">Anthropic AI</p>
-                    <p className="text-[11.5px] text-ink-4">Необязательно, пока AI-анализ отключён</p>
                   </div>
                   <Badge tone={integrations?.anthropic.configured ? 'pos' : 'muted'} dot>
                     {integrations?.anthropic.configured ? 'Подключено' : 'Не подключено'}
