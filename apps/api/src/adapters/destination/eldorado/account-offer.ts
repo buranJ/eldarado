@@ -10,6 +10,11 @@ export const ELDORADO_ACCOUNT_GAMES: Record<
     gameId: '339',
     seoAlias: 'car-parking-multiplayer-accounts',
   },
+  'arknights-endfield': {
+    gameId: '358',
+    seoAlias: 'arknights-endfield-accounts',
+  },
+  'standoff-2': { gameId: '340', seoAlias: 'standoff-2-accounts' },
 };
 
 export interface EldoradoOfferImage {

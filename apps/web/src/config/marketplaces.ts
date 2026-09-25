@@ -5,7 +5,7 @@ export const MARKETPLACES: Marketplace[] = [
     id: 'funpay',
     name: 'FunPay',
     roles: ['source'],
-    connection: 'demo',
+    connection: 'connected',
     feeRate: 0,
     websiteUrl: 'https://funpay.com',
     listingUrlTemplate: 'https://funpay.com/lots/offer?id={id}',

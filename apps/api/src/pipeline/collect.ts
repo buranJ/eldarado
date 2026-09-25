@@ -100,7 +100,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
             id: true,
             contentHash: true,
             status: true,
-            inventory: { select: { id: true } },
+            inventories: { select: { id: true } },
             images: { orderBy: { position: 'asc' } },
           },
         });
@@ -125,7 +125,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
             existing &&
             !imageCheckFailed &&
             !DOWNSTREAM_STATUSES.has(existing.status) &&
-            !existing.inventory
+            existing.inventories.length === 0
           ) {
             await prisma.listing.delete({ where: { id: existing.id } });
             await deleteSourceImages(existing.images.map((image) => image.fileName));
@@ -249,7 +249,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
             marketplace,
             gameId,
             externalId: { notIn: seenIds },
-            inventory: null,
+            inventories: { none: {} },
           },
           select: {
             id: true,

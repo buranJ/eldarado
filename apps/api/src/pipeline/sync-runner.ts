@@ -2,16 +2,19 @@ import type { CollectionRun } from '@gamestock/domain';
 import { collect } from './collect.js';
 import type { CollectOptions } from './collect.js';
 
-let running: Promise<CollectionRun> | null = null;
+const running = new Map<string, Promise<CollectionRun>>();
 
-export const isCollectionRunning = (): boolean => running !== null;
+export const isCollectionRunning = (gameId?: string): boolean =>
+  gameId ? running.has(gameId) : running.size > 0;
 
-/** Starts one shared collection run, or returns null when another run is active. */
+/** Starts one collection per game, or returns null when that game is already running. */
 export const startCollection = (options: CollectOptions = {}): Promise<CollectionRun> | null => {
-  if (running) return null;
+  const gameId = options.gameId ?? 'clash-royale';
+  if (running.has(gameId)) return null;
 
-  running = collect(options).finally(() => {
-    running = null;
+  const pending = collect({ ...options, gameId }).finally(() => {
+    running.delete(gameId);
   });
-  return running;
+  running.set(gameId, pending);
+  return pending;
 };

@@ -6,7 +6,7 @@ import type { Money } from '@gamestock/domain';
 import { cn } from '@/utils/cn';
 
 /**
- * Manual resale price override. The AI recommendation stays visible so the
+ * Manual resale price override. The calculated recommendation stays visible so the
  * operator always sees what they are deviating from.
  */
 export function PriceEditor({

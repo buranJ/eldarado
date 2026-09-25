@@ -226,10 +226,10 @@ export function MarketplacePage() {
       key: 'dataQuality',
       header: 'Данные',
       width: 90,
-      title: 'Полнота извлечённых данных — считается на этапе AI-анализа',
+      title: 'Полнота данных, извлечённых из объявления',
       render: (row) =>
         row.dataQuality === null ? (
-          <span className="text-[11.5px] text-ink-4">ждёт анализа</span>
+          <span className="text-[11.5px] text-ink-4">—</span>
         ) : (
           <span className="flex items-center gap-2">
             <ProgressBar
@@ -348,9 +348,8 @@ export function MarketplacePage() {
       )}
 
       <p className="text-[11.5px] leading-relaxed text-ink-4">
-        Данные собираются со страниц категорий источника. Эволюции, герои, гемы и условия
-        передачи появятся в таблице после подключения AI-анализа — в атрибутах площадки их нет,
-        они лежат в тексте заголовка.
+        Данные автоматически извлекаются из карточки и текста исходного объявления. Если источник
+        не указал характеристику, в таблице отображается прочерк.
       </p>
 
       <AccountDrawer

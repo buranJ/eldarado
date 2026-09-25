@@ -20,6 +20,9 @@ model User {
 
   sessions    UserSession[]
   integrations IntegrationCredential[]
+  inventory    InventoryItem[]
+  decisions    UserListingDecision[]
+  activity     ActivityEvent[]
 }
 
 model UserSession {
@@ -115,7 +118,8 @@ model Listing {
   sellerId String
 
   analysis  Analysis?
-  inventory InventoryItem?
+  inventories InventoryItem[]
+  decisions   UserListingDecision[]
   images    ListingImage[]
 
   @@unique([marketplace, externalId])
@@ -210,7 +214,9 @@ model Analysis {
 model InventoryItem {
   id        String  @id @default(cuid())
   listing   Listing @relation(fields: [listingId], references: [id])
-  listingId String  @unique
+  listingId String
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
   gameId    String
   title     String
 
@@ -234,6 +240,8 @@ model InventoryItem {
 
   listings MarketplaceListing[]
 
+  @@unique([userId, listingId])
+  @@index([userId, gameId, status])
   @@index([gameId, status])
   @@index([purchasedAt])
 }
@@ -249,9 +257,28 @@ model ActivityEvent {
   meta      String?
   actor     String   @default("оператор")
   listingId String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
   createdAt DateTime @default(now())
 
+  @@index([userId, gameId, createdAt])
   @@index([gameId, createdAt])
+}
+
+/// A user's decision about a public source listing. Source observations remain
+/// shared, while approval and rejection state belongs to one profile only.
+model UserListingDecision {
+  id        String   @id @default(cuid())
+  status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String
+
+  @@unique([userId, listingId])
+  @@index([userId, status])
 }
 
 /// A listing prepared for a destination marketplace. Created in draft form by

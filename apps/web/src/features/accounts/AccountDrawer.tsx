@@ -154,13 +154,7 @@ export function AccountDrawer({
             />
           </div>
         </div>
-      ) : (
-        <div className="border-b border-line bg-panel-2 px-5 py-4">
-          <p className="text-[12.5px] text-ink-3">
-            Аккаунт ещё не проходил AI-анализ. Оценки появятся после ближайшего прогона модели.
-          </p>
-        </div>
-      )}
+      ) : null}
 
       <div className="divide-y divide-line">
         {source.imageUrls.length ? (
@@ -207,7 +201,7 @@ export function AccountDrawer({
               mono
             />
             <DataField
-              label="Достоверность анализа"
+              label="Достоверность оценки"
               value={analysis ? `${analysis.analysisConfidence}%` : NO_DATA}
               mono
             />
@@ -330,7 +324,7 @@ export function AccountDrawer({
         </FieldGroup>
 
         {analysis ? (
-          <FieldGroup title="AI-анализ" columns={1}>
+          <FieldGroup title="Оценка аккаунта" columns={1}>
             <p className="max-w-[720px] text-[12.5px] leading-relaxed text-ink-2">
               {analysis.summary}
             </p>

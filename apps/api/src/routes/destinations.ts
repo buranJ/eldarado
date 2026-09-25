@@ -42,9 +42,9 @@ const publishSchema = z.object({
   actor: optionalField(100),
 });
 
-const loadInventoryItem = (id: string) =>
-  prisma.inventoryItem.findUnique({
-    where: { id },
+const loadInventoryItem = (id: string, userId: string) =>
+  prisma.inventoryItem.findFirst({
+    where: { id, userId },
     include: {
       listing: { include: { analysis: true, images: { orderBy: { position: 'asc' } } } },
       listings: true,
@@ -94,6 +94,16 @@ const INTERNAL_GAME_IDS: Record<string, string> = {
   '21': 'pubg-mobile',
   '52': 'clash-royale',
   '339': 'car-parking-multiplayer',
+  '340': 'standoff-2',
+  '358': 'arknights-endfield',
+};
+
+const GAME_LABELS: Record<string, string> = {
+  'clash-royale': 'Clash Royale',
+  'pubg-mobile': 'PUBG Mobile',
+  'car-parking-multiplayer': 'Car Parking Multiplayer',
+  'arknights-endfield': 'Arknights: Endfield',
+  'standoff-2': 'Standoff 2',
 };
 
 const internalGameId = (eldoradoGameId: string): string =>
@@ -113,14 +123,7 @@ const draftFor = (item: InventoryItem) => {
     typeof sourceAttributes.titleEn === 'string' ? sourceAttributes.titleEn.trim() : '';
   const sellerSummary = storedTitle || translateGameTitle(item.gameId, item.listing.sellerTitle);
   return buildDraft({
-    gameName:
-      item.gameId === 'clash-royale'
-        ? 'Clash Royale'
-        : item.gameId === 'pubg-mobile'
-          ? 'PUBG Mobile'
-          : item.gameId === 'car-parking-multiplayer'
-            ? 'Car Parking Multiplayer'
-            : item.gameId,
+    gameName: GAME_LABELS[item.gameId] ?? item.gameId,
     sellerSummary,
     sellMinor: item.manualMinor ?? item.recommendedMinor,
     currency: item.purchaseCurrency,
@@ -151,7 +154,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
   app.get('/api/destinations/eldorado/listings', async (request) => {
     const eldoradoClient = await eldoradoClientForUser(request.user!.id);
     const rows = await prisma.marketplaceListing.findMany({
-      where: { marketplace: 'eldorado' },
+      where: { marketplace: 'eldorado', item: { userId: request.user!.id } },
       include: { item: { include: { listing: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -170,7 +173,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
         inventoryItemId: row.itemId,
         accountId: row.item.listing.externalId,
         gameId: row.gameId,
-        gameLabel: row.gameId === 'clash-royale' ? 'Clash Royale' : row.gameId,
+        gameLabel: GAME_LABELS[row.gameId] ?? row.gameId,
         title: row.title,
         marketplace: row.marketplace,
         source: 'gamestock' as const,
@@ -250,7 +253,11 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       );
       const offerIds = [...new Set(orders.map((order) => order.offerId))];
       const localListings = await prisma.marketplaceListing.findMany({
-        where: { marketplace: 'eldorado', externalId: { in: offerIds } },
+        where: {
+          marketplace: 'eldorado',
+          externalId: { in: offerIds },
+          item: { userId: request.user!.id },
+        },
         include: { item: { include: { listing: true } } },
       });
       const localByOfferId = new Map(
@@ -346,7 +353,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
 
   app.get('/api/inventory/:id/eldorado/preview', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const item = await loadInventoryItem(id);
+    const item = await loadInventoryItem(id, request.user!.id);
     if (!item) return reply.code(404).send({ error: 'Позиция не найдена' });
     const game = ELDORADO_ACCOUNT_GAMES[item.gameId];
     if (!game) return reply.code(422).send({ error: `Для игры ${item.gameId} Eldorado не настроен` });
@@ -369,7 +376,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const input = publishSchema.parse(request.body ?? {});
-      const item = await loadInventoryItem(id);
+      const item = await loadInventoryItem(id, request.user!.id);
       if (!item) return reply.code(404).send({ error: 'Позиция не найдена' });
       if (!['purchased', 'ready_to_list', 'preparing'].includes(item.status)) {
         return reply.code(409).send({ error: 'Эту позицию нельзя опубликовать в текущем статусе' });
@@ -393,7 +400,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       try {
         const eldoradoClient = await eldoradoClientForUser(request.user!.id);
         const storedImages = item.listing.images.slice(0, 4);
-        const imageInputs = await Promise.all(
+        const imageInputs: Array<{ bytes: Buffer; mimeType: string; fileName: string }> = await Promise.all(
           storedImages.map(async (image) => ({
             bytes: await readFile(sourceImagePath(image.fileName)),
             mimeType: image.mimeType,
@@ -467,6 +474,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
               meta: `${payload.details.offerTitle} · $${input.priceUsd.toFixed(2)} · ${offerId}`,
               actor: input.actor?.trim() || 'оператор',
               listingId: item.listingId,
+              userId: request.user!.id,
             },
           });
         });
@@ -486,7 +494,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
 
   app.delete('/api/inventory/:id/eldorado/listing', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const item = await loadInventoryItem(id);
+    const item = await loadInventoryItem(id, request.user!.id);
     if (!item) return reply.code(404).send({ error: 'Позиция не найдена' });
 
     const listing = item.listings.find(
@@ -520,6 +528,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
             meta: `${listing.title} · ${listing.externalId}`,
             actor: 'оператор',
             listingId: item.listingId,
+            userId: request.user!.id,
           },
         });
       });

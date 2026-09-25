@@ -5,6 +5,7 @@ export const registerOverviewRoutes = (app: FastifyInstance): void => {
   /** Funnel over the current cohort — every stage derives from the same listings. */
   app.get('/api/overview', async (request) => {
     const { gameId = 'clash-royale' } = request.query as { gameId?: string };
+    const userId = request.user!.id;
     const live = { gameId, disappearedAt: null };
     const dayAgo = new Date(Date.now() - 24 * 3_600_000);
 
@@ -15,10 +16,14 @@ export const registerOverviewRoutes = (app: FastifyInstance): void => {
         prisma.listing.count({
           where: { ...live, status: { in: ['analyzed', 'needs_review', 'approved', 'purchased'] } },
         }),
-        prisma.listing.count({ where: { ...live, status: { in: ['approved', 'purchased'] } } }),
-        prisma.inventoryItem.count({ where: { gameId } }),
-        prisma.inventoryItem.count({ where: { gameId, status: { in: ['listed', 'reserved', 'sold'] } } }),
-        prisma.inventoryItem.count({ where: { gameId, status: 'sold' } }),
+        prisma.userListingDecision.count({
+          where: { userId, listing: { gameId }, status: 'purchased' },
+        }),
+        prisma.inventoryItem.count({ where: { userId, gameId } }),
+        prisma.inventoryItem.count({
+          where: { userId, gameId, status: { in: ['listed', 'reserved', 'sold'] } },
+        }),
+        prisma.inventoryItem.count({ where: { userId, gameId, status: 'sold' } }),
         prisma.analysis.aggregate({
           where: { listing: { is: { gameId } } },
           _avg: { dealScore: true },
@@ -43,8 +48,12 @@ export const registerOverviewRoutes = (app: FastifyInstance): void => {
 
   app.get('/api/activity', async (request) => {
     const { gameId = 'clash-royale', limit = '15' } = request.query as Record<string, string>;
+    const userId = request.user!.id;
     const events = await prisma.activityEvent.findMany({
-      where: { gameId },
+      where: {
+        gameId,
+        OR: [{ userId }, { userId: null, kind: 'scan_finished' }],
+      },
       orderBy: { createdAt: 'desc' },
       take: Math.min(Number(limit) || 15, 100),
     });

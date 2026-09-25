@@ -6,7 +6,7 @@ import type { MarketplaceConnection, MarketplaceId } from '@gamestock/domain';
 
 const LABELS: Record<MarketplaceConnection, { label: string; tone: BadgeTone }> = {
   connected: { label: 'Подключено', tone: 'pos' },
-  demo: { label: 'Demo mode', tone: 'warn' },
+  demo: { label: 'Ограниченный доступ', tone: 'warn' },
   not_connected: { label: 'Не подключено', tone: 'muted' },
 };
 

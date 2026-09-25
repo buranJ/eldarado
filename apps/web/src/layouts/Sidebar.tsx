@@ -5,7 +5,7 @@ import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { IconButton } from '@/components/ui/Button';
 import { NAV_GROUPS, NAV_ITEMS } from '@/config/navigation';
 import { GAMES, getGame } from '@/config/games';
-import { APP_NAME, APP_VERSION } from '@/config/app';
+import { APP_NAME } from '@/config/app';
 import { useAppState } from '@/app/providers/app-state-context';
 import { cn } from '@/utils/cn';
 
@@ -74,10 +74,8 @@ export function Sidebar() {
             align="start"
             items={GAMES.map((item) => ({
               key: item.id,
-              label:
-                item.status === 'coming_soon' ? `${item.name} — скоро` : item.name,
+              label: item.name,
               icon: item.id === gameId ? Check : undefined,
-              disabled: item.status !== 'active',
               onSelect: () => setGameId(item.id),
             }))}
             trigger={({ open, toggle }) => (
@@ -167,14 +165,6 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {!collapsed ? (
-        <div className="border-t border-line px-4 py-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-ink-4">Внутренняя панель</span>
-            <span className="num text-[11px] text-ink-4">v{APP_VERSION}</span>
-          </div>
-        </div>
-      ) : null}
     </aside>
   );
 }

@@ -62,10 +62,17 @@ export const registerListingRoutes = (app: FastifyInstance): void => {
 
   app.get('/api/listings', async (request) => {
     const q = querySchema.parse(request.query);
+    const userId = request.user!.id;
 
     const where: Record<string, unknown> = { gameId: q.gameId };
     if (q.marketplace) where.marketplace = q.marketplace;
-    if (q.status) where.status = q.status;
+    if (q.status) {
+      if (['approved', 'rejected', 'purchased'].includes(q.status)) {
+        where.decisions = { some: { userId, status: q.status } };
+      } else {
+        where.status = q.status;
+      }
+    }
     if (q.includeGone === 'false') where.disappearedAt = null;
     if (q.autoDelivery) where.autoDelivery = q.autoDelivery === 'true';
     if (q.priceMin !== undefined || q.priceMax !== undefined) {
@@ -98,29 +105,48 @@ export const registerListingRoutes = (app: FastifyInstance): void => {
       prisma.listing.count({ where }),
       prisma.listing.findMany({
         where,
-        include: { seller: true, analysis: true, images: { orderBy: { position: 'asc' } } },
+        include: {
+          seller: true,
+          analysis: true,
+          images: { orderBy: { position: 'asc' } },
+          decisions: { where: { userId }, take: 1 },
+        },
         orderBy,
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,
       }),
     ]);
 
-    return { items: rows.map(toApiAccount), total, page: q.page, pageSize: q.pageSize };
+    return {
+      items: rows.map((row) =>
+        toApiAccount({ ...row, status: row.decisions[0]?.status ?? row.status }),
+      ),
+      total,
+      page: q.page,
+      pageSize: q.pageSize,
+    };
   });
 
   app.get('/api/listings/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const userId = request.user!.id;
     const row = await prisma.listing.findUnique({
       where: { id },
-      include: { seller: true, analysis: true, images: { orderBy: { position: 'asc' } } },
+      include: {
+        seller: true,
+        analysis: true,
+        images: { orderBy: { position: 'asc' } },
+        decisions: { where: { userId }, take: 1 },
+      },
     });
     if (!row) return reply.code(404).send({ error: 'Объявление не найдено' });
-    return toApiAccount(row);
+    return toApiAccount({ ...row, status: row.decisions[0]?.status ?? row.status });
   });
 
   /** Listings that passed the deterministic pre-filter, including later operator states. */
   app.get('/api/qualified', async (request) => {
     const { gameId = 'clash-royale' } = request.query as { gameId?: string };
+    const userId = request.user!.id;
     const statuses = [
       'ready_for_analysis',
       'analyzed',
@@ -131,22 +157,43 @@ export const registerListingRoutes = (app: FastifyInstance): void => {
     ];
     const rows = await prisma.listing.findMany({
       where: { gameId, disappearedAt: null, status: { in: statuses } },
-      include: { seller: true, analysis: true, images: { orderBy: { position: 'asc' } } },
+      include: {
+        seller: true,
+        analysis: true,
+        images: { orderBy: { position: 'asc' } },
+        decisions: { where: { userId }, take: 1 },
+      },
       orderBy: { firstSeenAt: 'desc' },
     });
-    return { items: rows.map(toApiAccount), total: rows.length };
+    return {
+      items: rows.map((row) =>
+        toApiAccount({ ...row, status: row.decisions[0]?.status ?? row.status }),
+      ),
+      total: rows.length,
+    };
   });
 
   /** Top accounts ranked purely by Deal Score — the product's headline screen. */
   app.get('/api/top', async (request) => {
     const { gameId = 'clash-royale', limit = '100' } = request.query as Record<string, string>;
+    const userId = request.user!.id;
     const rows = await prisma.listing.findMany({
       where: { gameId, disappearedAt: null, analysis: { isNot: null } },
-      include: { seller: true, analysis: true, images: { orderBy: { position: 'asc' } } },
+      include: {
+        seller: true,
+        analysis: true,
+        images: { orderBy: { position: 'asc' } },
+        decisions: { where: { userId }, take: 1 },
+      },
       orderBy: { analysis: { dealScore: 'desc' } },
       take: Math.min(Number(limit) || 100, 200),
     });
-    return { items: rows.map(toApiAccount), total: rows.length };
+    return {
+      items: rows.map((row) =>
+        toApiAccount({ ...row, status: row.decisions[0]?.status ?? row.status }),
+      ),
+      total: rows.length,
+    };
   });
 
   app.get('/api/stats', async (request) => {

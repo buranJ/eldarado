@@ -1,11 +1,9 @@
 import {
-  Banknote,
   Boxes,
   LayoutDashboard,
   Megaphone,
   Receipt,
   Settings,
-  Sparkles,
   Store,
   Trophy,
 } from 'lucide-react';
@@ -33,7 +31,5 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/inventory', label: 'Инвентарь', icon: Boxes, group: 'operations' },
   { to: '/listings', label: 'Объявления', icon: Megaphone, group: 'operations' },
   { to: '/sales', label: 'Продажи', icon: Receipt, group: 'operations' },
-  { to: '/ai-analysis', label: 'AI-анализ', icon: Sparkles, group: 'system' },
-  { to: '/finance', label: 'Финансы', icon: Banknote, tag: 'скоро', group: 'system' },
   { to: '/settings', label: 'Настройки', icon: Settings, group: 'system' },
 ];

@@ -90,11 +90,15 @@ export function EldoradoPublishModal({
 
   useEffect(() => {
     if (!image) {
+      // The preview URL mirrors the selected browser File and must be revoked on replacement.
+      // eslint-disable-next-line react/set-state-in-effect
       setReplacementImageUrl(null);
       return undefined;
     }
     const url = URL.createObjectURL(image);
+    // eslint-disable-next-line react/set-state-in-effect
     setReplacementImageUrl(url);
+    // eslint-disable-next-line react/set-state-in-effect
     setActiveImageIndex(0);
     return () => URL.revokeObjectURL(url);
   }, [image]);

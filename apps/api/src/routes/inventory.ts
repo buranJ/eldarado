@@ -16,9 +16,9 @@ const formatMoney = (minor: number, currency: string): string => {
 
 type Row = Awaited<ReturnType<typeof loadItems>>[number];
 
-const loadItems = (gameId: string, status?: string) =>
+const loadItems = (gameId: string, userId: string, status?: string) =>
   prisma.inventoryItem.findMany({
-    where: { gameId, ...(status ? { status } : {}) },
+    where: { gameId, userId, ...(status ? { status } : {}) },
     include: { listing: { include: { analysis: true, seller: true } } },
     orderBy: { purchasedAt: 'desc' },
   });
@@ -72,7 +72,7 @@ const statusSchema = z.object({
 export const registerInventoryRoutes = (app: FastifyInstance): void => {
   app.get('/api/inventory', async (request) => {
     const { gameId = 'clash-royale', status } = request.query as Record<string, string>;
-    const rows = await loadItems(gameId, status);
+    const rows = await loadItems(gameId, request.user!.id, status);
     const items = rows.map(toApiItem);
 
     const held = items.filter((item) => item.status !== 'sold');
@@ -91,8 +91,8 @@ export const registerInventoryRoutes = (app: FastifyInstance): void => {
   app.patch('/api/inventory/:id/price', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { amount, actor } = priceSchema.parse(request.body ?? {});
-    const item = await prisma.inventoryItem.findUnique({
-      where: { id },
+    const item = await prisma.inventoryItem.findFirst({
+      where: { id, userId: request.user!.id },
       include: { listing: true },
     });
     if (!item) return reply.code(404).send({ error: 'Позиция не найдена' });
@@ -115,6 +115,7 @@ export const registerInventoryRoutes = (app: FastifyInstance): void => {
       )}${nextMinor === null ? ' (рекомендованная)' : ''}`,
       actor,
       listingId: item.listingId,
+      userId: request.user!.id,
     });
 
     return { id, manualPrice: nextMinor === null ? null : nextMinor / 100 };
@@ -123,8 +124,8 @@ export const registerInventoryRoutes = (app: FastifyInstance): void => {
   app.patch('/api/inventory/:id/status', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { status, actor } = statusSchema.parse(request.body ?? {});
-    const item = await prisma.inventoryItem.findUnique({
-      where: { id },
+    const item = await prisma.inventoryItem.findFirst({
+      where: { id, userId: request.user!.id },
       include: { listing: true },
     });
     if (!item) return reply.code(404).send({ error: 'Позиция не найдена' });
@@ -147,6 +148,7 @@ export const registerInventoryRoutes = (app: FastifyInstance): void => {
       meta: null,
       actor,
       listingId: item.listingId,
+      userId: request.user!.id,
     });
 
     return { id, status };

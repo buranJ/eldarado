@@ -16,7 +16,7 @@ export const ACCOUNT_STATUS: Record<AccountStatus, StatusDef> = {
   new: { label: 'Новый', tone: 'muted' },
   prefiltered_out: { label: 'Отсеян фильтром', tone: 'muted' },
   ready_for_analysis: { label: 'Прошёл проверку', tone: 'info' },
-  analyzed: { label: 'Проанализирован', tone: 'info' },
+  analyzed: { label: 'Проверен', tone: 'info' },
   needs_review: { label: 'Требует проверки', tone: 'warn' },
   approved: { label: 'Одобрен', tone: 'pos' },
   rejected: { label: 'Отклонён', tone: 'neg' },
@@ -25,7 +25,7 @@ export const ACCOUNT_STATUS: Record<AccountStatus, StatusDef> = {
 
 export const ANALYSIS_STATUS: Record<AnalysisStatus, StatusDef> = {
   pending: { label: 'В очереди', tone: 'muted' },
-  analyzed: { label: 'Проанализирован', tone: 'info' },
+  analyzed: { label: 'Проверен', tone: 'info' },
   needs_review: { label: 'Требует проверки', tone: 'warn' },
   failed: { label: 'Ошибка', tone: 'neg' },
 };

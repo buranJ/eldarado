@@ -39,7 +39,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: ProfileU
             {registering ? 'Создать профиль' : 'Вход в GameStock'}
           </h1>
           <p className="mt-1 text-[12px] leading-relaxed text-ink-3">
-            У каждого профиля собственные зашифрованные ключи Eldorado и AI.
+            У каждого профиля собственные зашифрованные ключи интеграций.
           </p>
         </div>
 

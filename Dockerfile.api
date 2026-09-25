@@ -20,5 +20,4 @@ RUN npx prisma generate --schema apps/api/prisma/schema.prisma
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npm run db:push --workspace @gamestock/api && npm run start --workspace @gamestock/api"]
-
+CMD ["sh", "-c", "npm run db:push --workspace @gamestock/api && npm run db:backfill-profile-ownership --workspace @gamestock/api && npm run start --workspace @gamestock/api"]

@@ -36,7 +36,7 @@ export const RISK_LABELS: Record<RiskLevel, string> = {
   high: 'высокий',
 };
 
-/** Inputs of the Deal Score, shown on the AI analysis page. */
+/** Inputs used to calculate the Deal Score. */
 export const DEAL_SCORE_INPUTS: { label: string; hint: string }[] = [
   { label: 'Account Quality', hint: 'Качество аккаунта как товара' },
   { label: 'Цена покупки', hint: 'Стоимость лота на источнике' },

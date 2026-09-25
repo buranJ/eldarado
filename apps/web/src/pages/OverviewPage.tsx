@@ -202,7 +202,7 @@ export function OverviewPage() {
           <Panel>
             <PanelHeader
               title="Лучшие возможности сегодня"
-              subtitle="Отобраны по Deal Score среди проанализированных аккаунтов"
+              subtitle="Аккаунты с лучшим соотношением цены, качества и риска"
               action={
                 <Button size="xs" variant="ghost" iconRight={ArrowRight} onClick={() => navigate('/top-accounts')}>
                   Все

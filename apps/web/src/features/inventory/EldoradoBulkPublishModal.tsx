@@ -41,6 +41,9 @@ const statusLabel: Record<EntryStatus, string> = {
   error: 'Ошибка',
 };
 
+const wait = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
 export function EldoradoBulkPublishModal({
   items,
   onClose,
@@ -141,6 +144,7 @@ export function EldoradoBulkPublishModal({
       } finally {
         setProcessedCount((value) => value + 1);
       }
+      if (entry !== queue.at(-1)) await wait(3_000);
     }
 
     setRunning(false);
@@ -177,6 +181,24 @@ export function EldoradoBulkPublishModal({
               {running
                 ? `Публикация ${processedCount}/${queueTotal}`
                 : `Опубликовать ${readyCount}`}
+            </Button>
+          ) : errorCount > 0 ? (
+            <Button
+              variant="default"
+              size="md"
+              className="h-10 px-5 text-[14px]"
+              onClick={() => {
+                setEntries((current) =>
+                  current.map((entry) =>
+                    entry.status === 'error' && entry.preview
+                      ? { ...entry, status: 'ready', error: null }
+                      : entry,
+                  ),
+                );
+                setFinished(false);
+              }}
+            >
+              Повторить ошибки
             </Button>
           ) : null}
         </>

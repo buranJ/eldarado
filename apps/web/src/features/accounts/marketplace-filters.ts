@@ -1,7 +1,7 @@
 /** Filter state and predicate for the raw source-marketplace feed. */
 
 /**
- * Pipeline stage of a listing. Once AI scoring lands (stage 2) this gains
+ * Pipeline stage of a listing. When scoring is available this gains
  * 'analyzed' / 'needs_review' without changing the filter's shape.
  */
 export type PipelineFilter = 'all' | 'ready_for_analysis' | 'prefiltered_out';

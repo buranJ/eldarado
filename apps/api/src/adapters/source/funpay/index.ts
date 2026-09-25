@@ -15,12 +15,17 @@ import {
 } from './config.js';
 
 let lastRequestAt = 0;
+let requestQueue: Promise<void> = Promise.resolve();
 const REQUEST_TIMEOUT_MS = 30_000;
 
 const throttle = async (): Promise<void> => {
-  const wait = MIN_REQUEST_INTERVAL_MS - (Date.now() - lastRequestAt);
-  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-  lastRequestAt = Date.now();
+  const scheduled = requestQueue.then(async () => {
+    const delay = MIN_REQUEST_INTERVAL_MS - (Date.now() - lastRequestAt);
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    lastRequestAt = Date.now();
+  });
+  requestQueue = scheduled.catch(() => undefined);
+  await scheduled;
 };
 
 const fetchPublic = async (path: string): Promise<Response> => {

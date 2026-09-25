@@ -20,6 +20,7 @@ export interface ActivityInput {
   meta?: string | null;
   actor?: string;
   listingId?: string | null;
+  userId?: string | null;
 }
 
 /** Append-only: the feed is history, so entries are never edited or removed. */
@@ -33,6 +34,7 @@ export const logActivity = async (input: ActivityInput): Promise<void> => {
       meta: input.meta ?? null,
       actor: input.actor ?? 'оператор',
       listingId: input.listingId ?? null,
+      userId: input.userId ?? null,
     },
   });
 };

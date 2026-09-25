@@ -12,7 +12,7 @@ export const registerSyncRoutes = (app: FastifyInstance, scheduler: SyncSchedule
       orderBy: { startedAt: 'desc' },
     });
     return {
-      running: isCollectionRunning(),
+      running: isCollectionRunning(gameId),
       lastRun: last ? toDomain(last) : null,
       ...scheduler.status(),
     };

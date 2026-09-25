@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { LogOut, Plus, Save, Trash2 } from 'lucide-react';
+import { LogOut, Save, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { Badge } from '@/components/ui/Badge';
-import type { BadgeTone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { FieldLabel, Select, TextInput } from '@/components/ui/Field';
 import { MarketplaceBadge } from '@/components/MarketplaceBadge';
@@ -15,13 +14,7 @@ import { useAppState } from '@/app/providers/app-state-context';
 import { useAuth } from '@/app/providers/auth-context';
 import { useToast } from '@/app/providers/toast-context';
 import { api, type IntegrationStatus } from '@/api/client';
-import type { CurrencyCode, MarketplaceConnection } from '@gamestock/domain';
-
-const CONNECTION: Record<MarketplaceConnection, { label: string; tone: BadgeTone }> = {
-  connected: { label: 'Подключено', tone: 'pos' },
-  demo: { label: 'Demo', tone: 'warn' },
-  not_connected: { label: 'Не подключено', tone: 'muted' },
-};
+import type { CurrencyCode } from '@gamestock/domain';
 
 const CURRENCY_LABELS: Record<CurrencyCode, string> = {
   USD: 'USD — доллар США',
@@ -71,10 +64,10 @@ export function SettingsPage() {
       await api.saveAnthropicCredentials(anthropicKey);
       setAnthropicKey('');
       await refreshIntegrations();
-      toast.push({ title: 'Ключ AI сохранён', tone: 'success' });
+      toast.push({ title: 'Ключ модели сохранён', tone: 'success' });
     } catch (error) {
       toast.push({
-        title: 'Не удалось сохранить ключ AI',
+        title: 'Не удалось сохранить ключ модели',
         description: error instanceof Error ? error.message : undefined,
         tone: 'error',
       });
@@ -178,7 +171,7 @@ export function SettingsPage() {
               <section className="space-y-3 border-t border-line pt-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[12.5px] font-medium text-ink">Anthropic AI</p>
+                    <p className="text-[12.5px] font-medium text-ink">Модель оценки Anthropic</p>
                   </div>
                   <Badge tone={integrations?.anthropic.configured ? 'pos' : 'muted'} dot>
                     {integrations?.anthropic.configured ? 'Подключено' : 'Не подключено'}
@@ -236,12 +229,7 @@ export function SettingsPage() {
           <Panel>
             <PanelHeader
               title="Игры"
-              subtitle="Каждая игра имеет собственный рейтинг и модель оценки"
-              action={
-                <Button size="xs" icon={Plus} disabled title="Доступно в следующей версии">
-                  Добавить игру
-                </Button>
-              }
+              subtitle="Игры, доступные для сбора и управления объявлениями"
             />
             <ul className="divide-y divide-line">
               {GAMES.map((game) => (
@@ -252,14 +240,10 @@ export function SettingsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-[12.5px] font-medium text-ink">{game.name}</p>
                     <p className="text-[11.5px] text-ink-4">
-                      {game.scoringModel
-                        ? `Модель оценки: ${game.scoringModel.version}`
-                        : 'Модель оценки не настроена'}
+                      {game.collectionEnabled ? 'Сбор объявлений включён' : 'Управление объявлениями Eldorado'}
                     </p>
                   </div>
-                  <Badge tone={game.status === 'active' ? 'pos' : 'muted'} dot>
-                    {game.status === 'active' ? 'Активна' : 'Скоро'}
-                  </Badge>
+                  <Badge tone="pos" dot>Доступна</Badge>
                 </li>
               ))}
             </ul>
@@ -272,13 +256,11 @@ export function SettingsPage() {
                 <li key={marketplace.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <MarketplaceBadge id={marketplace.id} />
-                    <Badge tone={CONNECTION[marketplace.connection].tone} dot>
-                      {CONNECTION[marketplace.connection].label}
-                    </Badge>
+                    <Badge tone="pos" dot>Подключено</Badge>
                   </div>
                   <div className="mt-2">
                     <DataField label="Расписание сбора" value={`Каждые ${SCAN_INTERVAL_HOURS} часа`} />
-                    <DataField label="Тип интеграции" value="Парсер (будет подключён)" />
+                    <DataField label="Тип интеграции" value="Публичный сбор объявлений" />
                   </div>
                 </li>
               ))}
@@ -292,8 +274,8 @@ export function SettingsPage() {
                 <li key={marketplace.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <MarketplaceBadge id={marketplace.id} />
-                    <Badge tone={CONNECTION[marketplace.connection].tone} dot>
-                      {CONNECTION[marketplace.connection].label}
+                    <Badge tone={integrations?.eldorado.configured ? 'pos' : 'muted'} dot>
+                      {integrations?.eldorado.configured ? 'Подключено' : 'Не подключено'}
                     </Badge>
                   </div>
                   <div className="mt-2">
@@ -302,7 +284,7 @@ export function SettingsPage() {
                       value={`${Math.round(marketplace.feeRate * 100)}%`}
                       mono
                     />
-                    <DataField label="Тип интеграции" value="Seller API (будет подключён)" />
+                    <DataField label="Тип интеграции" value="Seller API" />
                   </div>
                 </li>
               ))}

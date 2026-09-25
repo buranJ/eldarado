@@ -24,5 +24,5 @@ export const REQUEST_HEADERS: Record<string, string> = {
   Accept: 'text/html,application/xhtml+xml',
 };
 
-/** One category page per day is well under any reasonable rate limit. */
-export const MIN_REQUEST_INTERVAL_MS = 2_000;
+/** Keep detail-page requests polite while allowing a 200-lot scan to finish promptly. */
+export const MIN_REQUEST_INTERVAL_MS = 500;

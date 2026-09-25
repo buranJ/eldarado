@@ -9,6 +9,21 @@ const OFFERS_PAGE_SIZE = 50;
 const ORDERS_FIRST_CURSOR =
   '9999-99-99 99:99:99.999999999999999-9999-9999-9999-999999999999';
 const MAX_ORDER_PAGES = 500;
+const MAX_RATE_LIMIT_RETRIES = 5;
+
+const wait = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const retryDelay = (response: Response, attempt: number): number => {
+  const retryAfter = response.headers.get('retry-after');
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds > 0) return seconds * 1_000;
+    const at = Date.parse(retryAfter);
+    if (Number.isFinite(at)) return Math.max(1_000, at - Date.now());
+  }
+  return Math.min(30_000, 2_000 * 2 ** attempt);
+};
 
 interface TokenResponse {
   accessToken: string;
@@ -88,8 +103,11 @@ const errorMessage = async (response: Response): Promise<string> => {
 export class EldoradoClient {
   private token: { value: string; expiresAt: number } | null = null;
   private accountGamesPromise: Promise<EldoradoAccountGame[]> | null = null;
+  private readonly credentials: EldoradoCredentials | null;
 
-  constructor(private readonly credentials: EldoradoCredentials | null) {}
+  constructor(credentials: EldoradoCredentials | null) {
+    this.credentials = credentials;
+  }
 
   get configured(): boolean {
     return this.credentials !== null;
@@ -128,7 +146,12 @@ export class EldoradoClient {
     return this.token.value;
   }
 
-  private async request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+  private async request<T>(
+    path: string,
+    init: RequestInit = {},
+    retryAuth = true,
+    rateLimitAttempt = 0,
+  ): Promise<T> {
     const response = await fetch(`${API_ORIGIN}${path}`, {
       ...init,
       headers: {
@@ -137,9 +160,13 @@ export class EldoradoClient {
         ...init.headers,
       },
     });
-    if (response.status === 401 && retry) {
+    if (response.status === 401 && retryAuth) {
       this.token = null;
-      return this.request<T>(path, init, false);
+      return this.request<T>(path, init, false, rateLimitAttempt);
+    }
+    if (response.status === 429 && rateLimitAttempt < MAX_RATE_LIMIT_RETRIES) {
+      await wait(retryDelay(response, rateLimitAttempt));
+      return this.request<T>(path, init, retryAuth, rateLimitAttempt + 1);
     }
     if (!response.ok) throw new EldoradoApiError(await errorMessage(response), response.status);
     if (response.status === 204) return undefined as T;

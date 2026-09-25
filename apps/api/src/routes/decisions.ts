@@ -14,15 +14,18 @@ const bulkSchema = z.object({
 const DECIDABLE = ['analyzed', 'needs_review', 'ready_for_analysis', 'approved', 'rejected'];
 
 type DecisionListing = Prisma.ListingGetPayload<{
-  include: { analysis: true; inventory: true };
+  include: { analysis: true; inventories: true };
 }>;
 
 class DecisionError extends Error {
+  readonly statusCode: number;
+
   constructor(
     message: string,
-    readonly statusCode: number,
+    statusCode: number,
   ) {
     super(message);
+    this.statusCode = statusCode;
   }
 }
 
@@ -31,8 +34,9 @@ const formatMoney = (minor: number, currency: string): string => {
   return currency === 'RUB' ? `${amount} ₽` : `${amount} ${currency}`;
 };
 
-const inventoryData = (listing: DecisionListing, actor?: string) => ({
+const inventoryData = (listing: DecisionListing, userId: string, actor?: string) => ({
   listingId: listing.id,
+  userId,
   gameId: listing.gameId,
   title: listing.sellerTitle,
   purchaseMinor: listing.priceMinor,
@@ -45,7 +49,7 @@ const inventoryData = (listing: DecisionListing, actor?: string) => ({
 });
 
 const ensurePurchasable = (listing: DecisionListing): void => {
-  if (listing.inventory) throw new DecisionError('Аккаунт уже в инвентаре', 409);
+  if (listing.inventories.length > 0) throw new DecisionError('Аккаунт уже в инвентаре', 409);
   if (!DECIDABLE.includes(listing.status)) {
     throw new DecisionError(`Нельзя обработать объявление в статусе «${listing.status}»`, 409);
   }
@@ -54,12 +58,17 @@ const ensurePurchasable = (listing: DecisionListing): void => {
 const addToInventory = async (
   tx: Prisma.TransactionClient,
   listing: DecisionListing,
+  userId: string,
   actor: string | undefined,
   title: string,
 ) => {
   ensurePurchasable(listing);
-  const item = await tx.inventoryItem.create({ data: inventoryData(listing, actor) });
-  await tx.listing.update({ where: { id: listing.id }, data: { status: 'purchased' } });
+  const item = await tx.inventoryItem.create({ data: inventoryData(listing, userId, actor) });
+  await tx.userListingDecision.upsert({
+    where: { userId_listingId: { userId, listingId: listing.id } },
+    create: { userId, listingId: listing.id, status: 'purchased' },
+    update: { status: 'purchased' },
+  });
   await tx.activityEvent.create({
     data: {
       gameId: listing.gameId,
@@ -71,6 +80,7 @@ const addToInventory = async (
       }`,
       actor: actor ?? 'оператор',
       listingId: listing.id,
+      userId,
     },
   });
   return item;
@@ -79,12 +89,17 @@ const addToInventory = async (
 const rejectListing = async (
   tx: Prisma.TransactionClient,
   listing: DecisionListing,
+  userId: string,
   actor?: string,
 ) => {
-  if (listing.inventory || listing.status === 'purchased') {
+  if (listing.inventories.length > 0) {
     throw new DecisionError('Аккаунт уже в инвентаре, отклонить нельзя', 409);
   }
-  await tx.listing.update({ where: { id: listing.id }, data: { status: 'rejected' } });
+  await tx.userListingDecision.upsert({
+    where: { userId_listingId: { userId, listingId: listing.id } },
+    create: { userId, listingId: listing.id, status: 'rejected' },
+    update: { status: 'rejected' },
+  });
   await tx.activityEvent.create({
     data: {
       gameId: listing.gameId,
@@ -93,6 +108,7 @@ const rejectListing = async (
       title: 'Аккаунт отклонён',
       actor: actor ?? 'оператор',
       listingId: listing.id,
+      userId,
     },
   });
 };
@@ -105,18 +121,22 @@ const sendError = (error: unknown, reply: FastifyReply) => {
 };
 
 export const registerDecisionRoutes = (app: FastifyInstance): void => {
-  const load = async (id: string) =>
-    prisma.listing.findUnique({ where: { id }, include: { analysis: true, inventory: true } });
+  const load = async (id: string, userId: string) =>
+    prisma.listing.findUnique({
+      where: { id },
+      include: { analysis: true, inventories: { where: { userId } } },
+    });
 
   app.post('/api/listings/:id/approve', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { actor } = bodySchema.parse(request.body ?? {});
-    const listing = await load(id);
+    const userId = request.user!.id;
+    const listing = await load(id, userId);
     if (!listing) return reply.code(404).send({ error: 'Объявление не найдено' });
 
     try {
       const item = await prisma.$transaction((tx) =>
-        addToInventory(tx, listing, actor, 'Аккаунт одобрен и добавлен в инвентарь'),
+        addToInventory(tx, listing, userId, actor, 'Аккаунт одобрен и добавлен в инвентарь'),
       );
       return { id, status: 'purchased', inventoryItemId: item.id };
     } catch (error) {
@@ -127,11 +147,12 @@ export const registerDecisionRoutes = (app: FastifyInstance): void => {
   app.post('/api/listings/:id/reject', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { actor } = bodySchema.parse(request.body ?? {});
-    const listing = await load(id);
+    const userId = request.user!.id;
+    const listing = await load(id, userId);
     if (!listing) return reply.code(404).send({ error: 'Объявление не найдено' });
 
     try {
-      await prisma.$transaction((tx) => rejectListing(tx, listing, actor));
+      await prisma.$transaction((tx) => rejectListing(tx, listing, userId, actor));
       return { id, status: 'rejected' };
     } catch (error) {
       return sendError(error, reply);
@@ -140,13 +161,14 @@ export const registerDecisionRoutes = (app: FastifyInstance): void => {
 
   app.post('/api/listings/bulk-decision', async (request, reply) => {
     const { ids: rawIds, action, actor } = bulkSchema.parse(request.body ?? {});
+    const userId = request.user!.id;
     const ids = [...new Set(rawIds)];
 
     try {
       const inventoryItemIds = await prisma.$transaction(async (tx) => {
         const listings = await tx.listing.findMany({
           where: { id: { in: ids } },
-          include: { analysis: true, inventory: true },
+          include: { analysis: true, inventories: { where: { userId } } },
         });
         if (listings.length !== ids.length) {
           throw new DecisionError('Один или несколько аккаунтов больше не существуют', 404);
@@ -158,12 +180,13 @@ export const registerDecisionRoutes = (app: FastifyInstance): void => {
             const item = await addToInventory(
               tx,
               listing,
+              userId,
               actor,
               'Аккаунт одобрен и добавлен в инвентарь',
             );
             createdIds.push(item.id);
           } else {
-            await rejectListing(tx, listing, actor);
+            await rejectListing(tx, listing, userId, actor);
           }
         }
         return createdIds;
@@ -178,12 +201,13 @@ export const registerDecisionRoutes = (app: FastifyInstance): void => {
   app.post('/api/listings/:id/purchase', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { actor } = bodySchema.parse(request.body ?? {});
-    const listing = await load(id);
+    const userId = request.user!.id;
+    const listing = await load(id, userId);
     if (!listing) return reply.code(404).send({ error: 'Объявление не найдено' });
 
     try {
       const item = await prisma.$transaction((tx) =>
-        addToInventory(tx, listing, actor, 'Аккаунт куплен'),
+        addToInventory(tx, listing, userId, actor, 'Аккаунт куплен'),
       );
       return { id, status: 'purchased', inventoryItemId: item.id };
     } catch (error) {
