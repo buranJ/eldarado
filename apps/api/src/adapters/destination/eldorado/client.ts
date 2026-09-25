@@ -168,6 +168,12 @@ export class EldoradoClient {
       await wait(retryDelay(response, rateLimitAttempt));
       return this.request<T>(path, init, retryAuth, rateLimitAttempt + 1);
     }
+    if (response.status === 429) {
+      throw new EldoradoApiError(
+        'Eldorado временно ограничил частоту запросов. Подождите минуту и повторите операцию.',
+        429,
+      );
+    }
     if (!response.ok) throw new EldoradoApiError(await errorMessage(response), response.status);
     if (response.status === 204) return undefined as T;
     const text = await response.text();
