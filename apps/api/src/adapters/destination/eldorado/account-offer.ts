@@ -15,6 +15,8 @@ export const ELDORADO_ACCOUNT_GAMES: Record<
     seoAlias: 'arknights-endfield-accounts',
   },
   'standoff-2': { gameId: '340', seoAlias: 'standoff-2-accounts' },
+  'eldorado-179': { gameId: '179', seoAlias: 'jujutsu-phanpara-accounts' },
+  'eldorado-166': { gameId: '166', seoAlias: 'arknights-accounts' },
 };
 
 export interface EldoradoOfferImage {

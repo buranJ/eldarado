@@ -126,7 +126,7 @@ export const GAMES: AppGame[] = [
     monogram: 'JK',
     accent: '#d96c75',
     eldoradoGameId: '179',
-    collectionEnabled: false,
+    collectionEnabled: true,
     scoringModel: null,
   },
   {
@@ -137,7 +137,7 @@ export const GAMES: AppGame[] = [
     monogram: 'AK',
     accent: '#70a7bd',
     eldoradoGameId: '166',
-    collectionEnabled: false,
+    collectionEnabled: true,
     scoringModel: null,
   },
 ];

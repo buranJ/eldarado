@@ -8,6 +8,11 @@ export const FUNPAY_CATEGORIES: Record<string, { lotId: number; label: string }>
   'car-parking-multiplayer': { lotId: 1534, label: 'Car Parking Multiplayer — аккаунты' },
   'arknights-endfield': { lotId: 3939, label: 'Arknights: Endfield — аккаунты' },
   'standoff-2': { lotId: 454, label: 'Standoff 2 — аккаунты' },
+  // These ids intentionally match the existing Eldorado-backed workspace ids.
+  // Keeping them stable preserves imported listings and the selected-game value
+  // already stored in users' browsers.
+  'eldorado-179': { lotId: 3004, label: 'Jujutsu Kaisen Phantom Parade — аккаунты' },
+  'eldorado-166': { lotId: 1141, label: 'Arknights — аккаунты' },
 };
 
 export const FUNPAY_BASE = 'https://funpay.com';

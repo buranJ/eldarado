@@ -96,6 +96,8 @@ const INTERNAL_GAME_IDS: Record<string, string> = {
   '339': 'car-parking-multiplayer',
   '340': 'standoff-2',
   '358': 'arknights-endfield',
+  '179': 'eldorado-179',
+  '166': 'eldorado-166',
 };
 
 const GAME_LABELS: Record<string, string> = {
@@ -104,6 +106,8 @@ const GAME_LABELS: Record<string, string> = {
   'car-parking-multiplayer': 'Car Parking Multiplayer',
   'arknights-endfield': 'Arknights: Endfield',
   'standoff-2': 'Standoff 2',
+  'eldorado-179': 'Jujutsu Kaisen Phantom Parade',
+  'eldorado-166': 'Arknights',
 };
 
 const internalGameId = (eldoradoGameId: string): string =>

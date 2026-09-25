@@ -125,6 +125,38 @@ const STANDOFF_RULES: readonly TranslationRule[] = [
   [/без\s+использования\s+по|без\s+по/giu, 'no cheats'],
 ];
 
+const JJK_PHANTOM_PARADE_RULES: readonly TranslationRule[] = [
+  [/тайвань|тайваня/giu, 'Taiwan'],
+  [/япония|японии/giu, 'Japan'],
+  [/европа|европы/giu, 'Europe'],
+  [/глобал(?:ьный|ьная)?/giu, 'Global'],
+  [/кубик(?:и|ов|а)?/giu, 'Cubes'],
+  [/билет(?:ы|ов|а)?/giu, 'Tickets'],
+  [/персонаж(?:и|ей|а)?/giu, 'characters'],
+  [/любые\s+сочетания\s+персонажей/giu, 'any character combination'],
+  [/аккаунт\s+на\s+выбор/giu, 'choose your account'],
+  [/подробнее\s+внутри/giu, 'full details inside'],
+  [/пробужденн(?:ый|ая)/giu, 'Awakened'],
+  [/годжо/giu, 'Gojo'],
+  [/сукуна/giu, 'Sukuna'],
+  [/юта/giu, 'Yuta'],
+  [/итадори/giu, 'Itadori'],
+  [/махито/giu, 'Mahito'],
+  [/домейн/giu, 'Domain'],
+];
+
+const ARKNIGHTS_RULES: readonly TranslationRule[] = [
+  [/неролл/giu, 'non-reroll'],
+  [/реролл/giu, 'reroll'],
+  [/орундум(?:а|ы)?/giu, 'Orundum'],
+  [/ориджиниум|оригиниум/giu, 'Originite Prime'],
+  [/оператор(?:ы|ов|а)?/giu, 'Operators'],
+  [/лимитированн(?:ые|ых|ый)/giu, 'Limited'],
+  [/сюжет/giu, 'Story'],
+  [/крутк(?:и|ок)/giu, 'Pulls'],
+  [/потенциал/giu, 'Potential'],
+];
+
 const translate = (source: string, rules: readonly TranslationRule[], fallback: string): string =>
   translateWithRules(source, [...rules, ...COMMON_ACCOUNT_RULES], fallback);
 
@@ -140,6 +172,10 @@ export const translateGameTitle = (gameId: string, source: string): string => {
       return translate(source, ENDFIELD_RULES, 'Arknights: Endfield account');
     case 'standoff-2':
       return translate(source, STANDOFF_RULES, 'Standoff 2 account');
+    case 'eldorado-179':
+      return translate(source, JJK_PHANTOM_PARADE_RULES, 'JJK Phantom Parade account');
+    case 'eldorado-166':
+      return translate(source, ARKNIGHTS_RULES, 'Arknights account');
     default:
       return source;
   }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAccountOfferPayload } from './account-offer.js';
+import { buildAccountOfferPayload, ELDORADO_ACCOUNT_GAMES } from './account-offer.js';
 
 test('builds the current Eldorado account offer payload without legacy secrets', () => {
   const payload = buildAccountOfferPayload(
@@ -60,5 +60,16 @@ test('normalizes partially supplied optional delivery groups like Eldorado selle
   assert.deepEqual(payload.accountDeliveryDetails[0].mfaDetails, {
     mfaLogin: 'recovery-code',
     mfaPassword: '',
+  });
+});
+
+test('maps both additional games to Eldorado account categories', () => {
+  assert.deepEqual(ELDORADO_ACCOUNT_GAMES['eldorado-179'], {
+    gameId: '179',
+    seoAlias: 'jujutsu-phanpara-accounts',
+  });
+  assert.deepEqual(ELDORADO_ACCOUNT_GAMES['eldorado-166'], {
+    gameId: '166',
+    seoAlias: 'arknights-accounts',
   });
 });

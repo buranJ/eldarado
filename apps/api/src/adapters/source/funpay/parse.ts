@@ -107,7 +107,14 @@ const stripGameSuffix = (
 };
 
 const titleNumber = (title: string, labels: string): number | null => {
-  const match = title.match(new RegExp(`(\\d[\\d\\s.,]*)\\s*(?:${labels})`, 'iu'));
+  const match = title.match(new RegExp(`(\\d[\\d\\s.,]*)\\s*\\+?\\s*(?:${labels})`, 'iu'));
+  if (!match) return null;
+  const parsed = Number.parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
+  return Number.isFinite(parsed) ? Math.round(parsed) : null;
+};
+
+const titleNumberAfter = (title: string, labels: string): number | null => {
+  const match = title.match(new RegExp(`(?:${labels})\\s*[:xх-]?\\s*(\\d[\\d\\s.,]*)`, 'iu'));
   if (!match) return null;
   const parsed = Number.parseFloat(match[1].replace(/\s/g, '').replace(',', '.'));
   return Number.isFinite(parsed) ? Math.round(parsed) : null;
@@ -152,6 +159,23 @@ const gameDataFor = (
         playtimeHours: titleNumber(title, 'час(?:ов|а)?|hours?'),
         gold: titleNumber(title, 'голд(?:ы|а)?|gold|g'),
       };
+    case 'eldorado-179':
+      return {
+        titleEn,
+        cubes: titleNumber(title, 'кубик(?:ов|и)?|cubes?|gems?|diamonds?'),
+        ssrCharacters: titleNumber(title, 'SSR'),
+        server: attrs.server ?? null,
+      };
+    case 'eldorado-166':
+      return {
+        titleEn,
+        orundum: titleNumber(title, 'orundum|орундум(?:а|ы)?'),
+        operators:
+          titleNumberAfter(title, 'оператор(?:ов|ы|а)?|operators?') ??
+          titleNumber(title, 'оператор(?:ов|ы|а)?|operators?'),
+        accountLevel: titleNumber(title, 'уров(?:ень|ня)|лвл|lvl|level'),
+        platform: attrs.server ?? null,
+      };
     default:
       return {
         arena: toInt(attrs.arena),
@@ -192,6 +216,7 @@ export const parseCategory = (html: string, gameId?: string): RawOffer[] => {
       sport: node.attr('data-f-sport'),
       levela: node.attr('data-f-levela'),
       levele: node.attr('data-f-levele'),
+      server: node.attr('data-f-server') ?? node.attr('data-server'),
     };
 
     const rawTitle = node.find('.tc-desc-text').first().text().trim();
