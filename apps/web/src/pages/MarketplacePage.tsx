@@ -293,7 +293,7 @@ export function MarketplacePage() {
           setPage(1);
         }}
         resultCount={total}
-        totalCount={lastRun?.seen ?? total}
+        totalCount={Math.max(lastRun?.seen ?? 0, total)}
       />
 
       {listings.error ? (

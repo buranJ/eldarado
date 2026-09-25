@@ -62,12 +62,10 @@ export function DropdownMenu({
     };
     window.addEventListener('mousedown', onPointerDown);
     window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
     return () => {
       window.removeEventListener('mousedown', onPointerDown);
       window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
     };
   }, [open, close]);

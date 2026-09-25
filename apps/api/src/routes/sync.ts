@@ -8,7 +8,10 @@ export const registerSyncRoutes = (app: FastifyInstance, scheduler: SyncSchedule
   app.get('/api/sync/status', async (request) => {
     const { gameId = 'clash-royale' } = request.query as { gameId?: string };
     const last = await prisma.collectionRun.findFirst({
-      where: { gameId },
+      // A newly started run initially contains zero counters. Returning it as
+      // the "last run" made the UI briefly show values such as "191 of 0".
+      // Running state is exposed separately through isCollectionRunning().
+      where: { gameId, status: { not: 'running' } },
       orderBy: { startedAt: 'desc' },
     });
     return {
