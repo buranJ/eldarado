@@ -9,7 +9,7 @@ export const PREFILTER: Record<string, PrefilterConfig> = {
   'clash-royale': {
     minSellerRating: 4,
     minSellerReviews: 0,
-    minSellerAgeMonths: 6,
+    minSellerAgeMonths: 0,
     allowUnknownSellerRating: true,
     allowUnknownSellerAge: true,
     minPrice: 300,
