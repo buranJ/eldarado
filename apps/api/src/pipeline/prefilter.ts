@@ -1,6 +1,7 @@
 import type { PrefilterConfig, PrefilterVerdict } from '@gamestock/domain';
 import type { RawOffer } from '../adapters/source/types.js';
 import { checkSanity } from '../config/sanity.js';
+import { convertMinor } from '../config/marketplaces.js';
 
 /**
  * Rule gate that runs before any AI call. Reasons are accumulated rather than
@@ -37,10 +38,12 @@ export const prefilter = (
     );
   }
 
-  const price = offer.price.minor / 100;
-  if (offer.price.currency !== config.priceCurrency) {
-    reasons.push(`валюта ${offer.price.currency} не совпадает с ${config.priceCurrency}`);
-  } else if (price < config.minPrice) {
+  // FunPay localizes prices according to the server region. Apply the same
+  // operational FX table used by resale calculations before comparing a
+  // listing with game thresholds, while keeping the original source price.
+  const price =
+    convertMinor(offer.price.minor, offer.price.currency, config.priceCurrency) / 100;
+  if (price < config.minPrice) {
     reasons.push(`цена ${price.toFixed(0)} < ${config.minPrice}`);
   } else if (price > config.maxPrice) {
     reasons.push(`цена ${price.toFixed(0)} > ${config.maxPrice}`);

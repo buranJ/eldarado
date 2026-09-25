@@ -164,7 +164,7 @@ export function Topbar() {
           icon={RefreshCw}
           onClick={onRefresh}
           disabled={!canCollect || busy}
-          title={canCollect ? undefined : 'Парсер для этой игры ещё не подключён'}
+          title={canCollect ? undefined : 'Сбор FunPay недоступен для этой игры'}
           className={busy ? '[&>svg]:animate-spin' : undefined}
         >
           Собрать сейчас

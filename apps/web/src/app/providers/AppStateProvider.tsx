@@ -4,18 +4,34 @@ import { AppStateContext } from './app-state-context';
 import type { AppStateApi } from './app-state-context';
 import { useToast } from './toast-context';
 import { api } from '@/api/client';
-import { DEFAULT_GAME_ID } from '@/config/games';
+import { DEFAULT_GAME_ID, GAMES } from '@/config/games';
 import { DEFAULT_BASE_CURRENCY } from '@/config/app';
 import type { CurrencyCode, GameId, InventoryStatus } from '@gamestock/domain';
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
 
-  const [gameId, setGameId] = useState<GameId>(DEFAULT_GAME_ID);
+  const [gameId, setSelectedGameId] = useState<GameId>(() => {
+    try {
+      const saved = window.localStorage.getItem('gamestock.selected-game');
+      return GAMES.some((game) => game.id === saved) ? (saved as GameId) : DEFAULT_GAME_ID;
+    } catch {
+      return DEFAULT_GAME_ID;
+    }
+  });
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(DEFAULT_BASE_CURRENCY);
   const [dataVersion, setDataVersion] = useState(0);
 
   const notifyDataChanged = useCallback(() => setDataVersion((value) => value + 1), []);
+
+  const setGameId = useCallback((nextGameId: GameId) => {
+    setSelectedGameId(nextGameId);
+    try {
+      window.localStorage.setItem('gamestock.selected-game', nextGameId);
+    } catch {
+      // Selection still works for this session when browser storage is unavailable.
+    }
+  }, []);
 
   /** Runs a write, refreshes dependent screens, and reports the outcome once. */
   const mutate = useCallback(
@@ -148,6 +164,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }),
     [
       gameId,
+      setGameId,
       baseCurrency,
       dataVersion,
       notifyDataChanged,
