@@ -446,6 +446,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
             },
           },
           uploadedImages as [EldoradoOfferImage, ...EldoradoOfferImage[]],
+          game.tradeEnvironmentId ?? null,
         );
         const offerId = await eldoradoClient.createAccountOffer(payload);
         const publishedAt = new Date();

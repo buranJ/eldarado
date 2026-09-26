@@ -13,6 +13,7 @@ import { FieldLabel, Select, TextInput } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { toBase } from '@/utils/money';
 import { createTemporaryCredentials } from './temporary-credentials';
+import { getGame } from '@/config/games';
 
 const textareaClass =
   'w-full rounded-md border border-line-2 bg-panel-2 px-2 py-1.5 text-[12px] text-ink placeholder:text-ink-4 focus:border-accent focus:outline-none';
@@ -163,7 +164,7 @@ export function EldoradoPublishModal({
       open
       onClose={submitting ? () => undefined : onClose}
       title="Публикация на Eldorado"
-      description={`${item.accountId} · Clash Royale · автоматическая доставка`}
+      description={`${item.accountId} · ${getGame(item.gameId).name} · автоматическая доставка`}
       width="w-[720px]"
       footer={
         result ? (

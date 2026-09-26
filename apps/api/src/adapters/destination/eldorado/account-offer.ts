@@ -2,7 +2,7 @@ import type { ListingDraft } from '../types.js';
 
 export const ELDORADO_ACCOUNT_GAMES: Record<
   string,
-  { gameId: string; seoAlias: string }
+  { gameId: string; seoAlias: string; tradeEnvironmentId?: string }
 > = {
   'clash-royale': { gameId: '52', seoAlias: 'clash-royale-accounts' },
   'pubg-mobile': { gameId: '21', seoAlias: 'pubg-mobile-accounts' },
@@ -16,7 +16,9 @@ export const ELDORADO_ACCOUNT_GAMES: Record<
   },
   'standoff-2': { gameId: '340', seoAlias: 'standoff-2-accounts' },
   'eldorado-179': { gameId: '179', seoAlias: 'jujutsu-phanpara-accounts' },
-  'eldorado-166': { gameId: '166', seoAlias: 'arknights-accounts' },
+  // Arknights requires a region. FunPay's category is Global, whose stable
+  // Eldorado Trade Environment ID is 0.
+  'eldorado-166': { gameId: '166', seoAlias: 'arknights-accounts', tradeEnvironmentId: '0' },
 };
 
 export interface EldoradoOfferImage {
@@ -62,7 +64,7 @@ export interface EldoradoAccountOfferPayload {
   augmentedGame: {
     gameId: string;
     category: 'Account';
-    tradeEnvironmentId: null;
+    tradeEnvironmentId: string | null;
     offerAttributes: never[];
   };
   accountDeliveryDetails: Array<{
@@ -101,6 +103,7 @@ export const buildAccountOfferPayload = (
   draft: ListingDraft,
   input: EldoradoAccountPublishInput,
   images: [EldoradoOfferImage, ...EldoradoOfferImage[]],
+  tradeEnvironmentId: string | null = null,
 ): EldoradoAccountOfferPayload => {
   const [mainOfferImage, ...offerImages] = images;
   return {
@@ -121,7 +124,7 @@ export const buildAccountOfferPayload = (
     augmentedGame: {
       gameId,
       category: 'Account',
-      tradeEnvironmentId: null,
+      tradeEnvironmentId,
       offerAttributes: [],
     },
     accountDeliveryDetails: [

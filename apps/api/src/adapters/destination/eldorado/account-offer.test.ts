@@ -71,5 +71,23 @@ test('maps both additional games to Eldorado account categories', () => {
   assert.deepEqual(ELDORADO_ACCOUNT_GAMES['eldorado-166'], {
     gameId: '166',
     seoAlias: 'arknights-accounts',
+    tradeEnvironmentId: '0',
   });
+});
+
+test('adds the required Arknights Global trade environment', () => {
+  const game = ELDORADO_ACCOUNT_GAMES['eldorado-166'];
+  const payload = buildAccountOfferPayload(
+    game.gameId,
+    { title: 'Arknights', description: 'Global account', sellMinor: 1, currency: 'USD' },
+    {
+      priceUsd: 10,
+      hasOriginalEmail: false,
+      credentials: { accountLogin: 'login', accountPassword: 'password' },
+    },
+    [{ smallImage: 's', largeImage: 'l', originalSizeImage: 'o' }],
+    game.tradeEnvironmentId,
+  );
+
+  assert.equal(payload.augmentedGame.tradeEnvironmentId, '0');
 });
