@@ -509,9 +509,14 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
         const publishedAt = new Date();
         const sellMinor = Math.round(input.priceUsd * 100);
 
-        await prisma.$transaction(async (tx) => {
-          await tx.marketplaceListing.create({
-            data: {
+        const persistPublication = () => prisma.$transaction(async (tx) => {
+          const existingPublication = await tx.marketplaceListing.findUnique({
+            where: { marketplace_externalId: { marketplace: 'eldorado', externalId: offerId } },
+            select: { id: true },
+          });
+          await tx.marketplaceListing.upsert({
+            where: { marketplace_externalId: { marketplace: 'eldorado', externalId: offerId } },
+            create: {
               itemId: item.id,
               gameId: item.gameId,
               marketplace: 'eldorado',
@@ -525,21 +530,48 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
               status: 'published',
               publishedAt,
             },
-          });
-          await tx.inventoryItem.update({ where: { id: item.id }, data: { status: 'listed' } });
-          await tx.activityEvent.create({
-            data: {
-              gameId: item.gameId,
-              kind: 'listing_published',
-              subject: item.listing.externalId,
-              title: 'Лот опубликован на Eldorado',
-              meta: `${payload.details.offerTitle} · $${input.priceUsd.toFixed(2)} · ${offerId}`,
-              actor: input.actor?.trim() || 'оператор',
-              listingId: item.listingId,
-              userId: request.user!.id,
+            update: {
+              status: 'published',
+              error: null,
+              publishedAt,
             },
           });
+          await tx.inventoryItem.update({ where: { id: item.id }, data: { status: 'listed' } });
+          if (!existingPublication) {
+            await tx.activityEvent.create({
+              data: {
+                gameId: item.gameId,
+                kind: 'listing_published',
+                subject: item.listing.externalId,
+                title: 'Лот опубликован на Eldorado',
+                meta: `${payload.details.offerTitle} · $${input.priceUsd.toFixed(2)} · ${offerId}`,
+                actor: input.actor?.trim() || 'оператор',
+                listingId: item.listingId,
+                userId: request.user!.id,
+              },
+            });
+          }
         });
+
+        try {
+          await persistPublication();
+        } catch (firstError) {
+          request.log.warn({ err: firstError, offerId }, 'Повторное сохранение опубликованного лота');
+          try {
+            await persistPublication();
+          } catch (secondError) {
+            request.log.error({ err: secondError, offerId }, 'Не удалось сохранить опубликованный лот');
+            try {
+              await eldoradoClient.deleteAccountOffer(offerId);
+            } catch (cleanupError) {
+              request.log.error({ err: cleanupError, offerId }, 'Не удалось удалить несохранённый лот');
+              throw new Error(
+                `Лот создан на Eldorado, но не сохранён в GameStock. Удалите лот ${offerId} вручную`,
+              );
+            }
+            throw new Error('Eldorado принял лот, но GameStock не смог его сохранить. Лот автоматически удалён; повторите публикацию');
+          }
+        }
 
         return {
           offerId,

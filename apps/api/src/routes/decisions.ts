@@ -11,7 +11,16 @@ const bulkSchema = z.object({
   actor: z.string().optional(),
 });
 
-const DECIDABLE = ['analyzed', 'needs_review', 'ready_for_analysis', 'approved', 'rejected'];
+const DECIDABLE = new Set([
+  'prefiltered_out',
+  'analyzed',
+  'needs_review',
+  'ready_for_analysis',
+  'approved',
+  'rejected',
+]);
+
+export const isDecidableStatus = (status: string): boolean => DECIDABLE.has(status);
 
 type DecisionListing = Prisma.ListingGetPayload<{
   include: { analysis: true; inventories: true };
@@ -50,7 +59,7 @@ const inventoryData = (listing: DecisionListing, userId: string, actor?: string)
 
 const ensurePurchasable = (listing: DecisionListing): void => {
   if (listing.inventories.length > 0) throw new DecisionError('Аккаунт уже в инвентаре', 409);
-  if (!DECIDABLE.includes(listing.status)) {
+  if (!isDecidableStatus(listing.status)) {
     throw new DecisionError(`Нельзя обработать объявление в статусе «${listing.status}»`, 409);
   }
 };

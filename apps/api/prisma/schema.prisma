@@ -360,6 +360,7 @@ model MarketplaceListing {
 
   @@index([gameId, status])
   @@index([itemId])
+  @@unique([marketplace, externalId])
 }
 
 /// Last verified state of an Eldorado order. It provides a durable audit trail
