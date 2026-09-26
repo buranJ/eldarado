@@ -16,7 +16,7 @@ RUN npm ci --include=dev
 
 COPY apps/api apps/api
 COPY packages/domain packages/domain
-RUN npx prisma generate --schema apps/api/prisma/schema.prisma
+RUN npm exec --workspace @gamestock/api -- prisma generate --schema prisma/schema.prisma
 
 EXPOSE 3001
 

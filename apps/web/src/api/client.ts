@@ -178,6 +178,8 @@ export interface SyncStatus {
 export interface HealthStatus {
   ok: boolean;
   aiConfigured: boolean;
+  database?: { ok: boolean; latencyMs: number };
+  storage?: { ok: boolean; freeBytes: number | null; usedPercent: number | null };
 }
 
 export interface EldoradoStatus {

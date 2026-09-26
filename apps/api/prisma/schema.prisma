@@ -165,6 +165,26 @@ model CollectionRun {
   @@index([gameId, startedAt])
 }
 
+/// Durable collection request. Jobs survive API restarts and are retried by
+/// the single background worker. CollectionRun remains the immutable result.
+model CollectionJob {
+  id           String    @id @default(cuid())
+  marketplace  String    @default("funpay")
+  gameId       String
+  pruneMissing Boolean   @default(true)
+  status       String    @default("queued")
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(3)
+  error        String?
+  createdAt    DateTime  @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@index([gameId, status])
+}
+
 /// Result of one analysis pass over a listing. Facts come from the model,
 /// every score is computed deterministically from those facts.
 model Analysis {

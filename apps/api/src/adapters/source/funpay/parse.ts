@@ -162,7 +162,7 @@ const gameDataFor = (
     case 'eldorado-179':
       return {
         titleEn,
-        cubes: titleNumber(title, 'кубик(?:ов|и)?|cubes?|gems?|diamonds?'),
+        cubes: titleNumber(title, 'куб(?:ик)?(?:ов|и)?|cubes?|gems?|diamonds?'),
         ssrCharacters: titleNumber(title, 'SSR'),
         server: attrs.server ?? null,
       };

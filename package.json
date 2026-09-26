@@ -14,8 +14,12 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
+    "e2e": "playwright test",
     "db:push": "npm run db:push --workspace @gamestock/api",
     "db:studio": "npm run db:studio --workspace @gamestock/api",
     "analyze": "npm run analyze --workspace @gamestock/api --"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
   }
 }

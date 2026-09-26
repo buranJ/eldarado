@@ -37,6 +37,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ELDORADO_CLIENT_ID: ${ELDORADO_CLIENT_ID:-}
       ELDORADO_CLIENT_SECRET: ${ELDORADO_CLIENT_SECRET:-}
+      MONITOR_WEBHOOK_URL: ${MONITOR_WEBHOOK_URL:-}
     healthcheck:
       test:
         [
@@ -74,9 +75,52 @@ services:
     networks:
       - internal
 
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_HOST: db
+      POSTGRES_DB: gamestock
+      POSTGRES_USER: gamestock
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    command:
+      - /bin/sh
+      - -c
+      - while true; do if /scripts/backup.sh; then sleep "$${BACKUP_INTERVAL_SECONDS}"; else sleep 300; fi; done
+    volumes:
+      - ./scripts:/scripts:ro
+      - ${GAMESTOCK_DATA_DIR:-./data}/storage:/source-storage:ro
+      - ${GAMESTOCK_BACKUP_DIR:-./backups/automatic}:/backups
+    networks:
+      - internal
+
+  monitor:
+    image: alpine:3.22
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    environment:
+      MONITOR_INTERVAL_SECONDS: ${MONITOR_INTERVAL_SECONDS:-300}
+      MONITOR_DISK_USED_PERCENT: ${MONITOR_DISK_USED_PERCENT:-85}
+      MONITOR_WEBHOOK_URL: ${MONITOR_WEBHOOK_URL:-}
+    command: ["/bin/sh", "-c", "apk add --no-cache curl >/dev/null && exec /scripts/monitor.sh"]
+    volumes:
+      - ./scripts:/scripts:ro
+      - ${GAMESTOCK_DATA_DIR:-./data}:/data:ro
+    networks:
+      - internal
+
 networks:
   internal:
 
 volumes:
   postgres_data:
-

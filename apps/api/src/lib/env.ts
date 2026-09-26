@@ -25,4 +25,5 @@ export const env = {
    */
   eldoradoClientId: optional('ELDORADO_CLIENT_ID'),
   eldoradoClientSecret: optional('ELDORADO_CLIENT_SECRET'),
+  monitorWebhookUrl: optional('MONITOR_WEBHOOK_URL'),
 };

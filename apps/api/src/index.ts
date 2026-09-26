@@ -14,6 +14,9 @@ import { sessionUser } from './auth/session.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerIntegrationRoutes } from './routes/integrations.js';
 import './auth/types.js';
+import { startCollectionWorker } from './pipeline/sync-runner.js';
+import { healthReport } from './lib/health.js';
+import { reportOperationalError } from './lib/error-monitor.js';
 
 const app = Fastify({ logger: { transport: { target: 'pino-pretty' } } });
 
@@ -38,9 +41,18 @@ app.addHook('onRequest', async (request, reply) => {
   }
 });
 
-app.get('/api/health', async () => {
-  await prisma.$queryRaw`SELECT 1`;
-  return { ok: true, aiConfigured: env.anthropicApiKey !== null };
+app.get('/api/health', async (_request, reply) => {
+  const report = await healthReport();
+  if (!report.ok) reply.code(503);
+  return { ...report, aiConfigured: env.anthropicApiKey !== null };
+});
+
+app.addHook('onError', async (request, _reply, error) => {
+  request.log.error(
+    { err: error, method: request.method, url: request.url },
+    'Необработанная ошибка запроса',
+  );
+  reportOperationalError({ method: request.method, url: request.url, message: error.message });
 });
 
 registerAuthRoutes(app);
@@ -55,6 +67,7 @@ await prisma.collectionRun.updateMany({
   },
 });
 const scheduler = await startScheduler((message) => app.log.info(message));
+const collectionWorker = await startCollectionWorker((message) => app.log.info(message));
 registerSyncRoutes(app, scheduler);
 registerAnalysisRoutes(app);
 registerDecisionRoutes(app);
@@ -64,6 +77,7 @@ registerDestinationRoutes(app);
 
 const shutdown = async (): Promise<void> => {
   await scheduler.destroy();
+  await collectionWorker.stop();
   await app.close();
   await prisma.$disconnect();
   process.exit(0);

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
 import { toDomain } from '../pipeline/collect.js';
-import { isCollectionRunning, startCollection } from '../pipeline/sync-runner.js';
+import { enqueueCollection, isCollectionRunning } from '../pipeline/sync-runner.js';
 import type { SyncScheduler } from '../scheduler.js';
 
 export const registerSyncRoutes = (app: FastifyInstance, scheduler: SyncScheduler): void => {
@@ -15,7 +15,7 @@ export const registerSyncRoutes = (app: FastifyInstance, scheduler: SyncSchedule
       orderBy: { startedAt: 'desc' },
     });
     return {
-      running: isCollectionRunning(gameId),
+      running: await isCollectionRunning(gameId),
       lastRun: last ? toDomain(last) : null,
       ...scheduler.status(),
     };
@@ -41,22 +41,12 @@ export const registerSyncRoutes = (app: FastifyInstance, scheduler: SyncSchedule
 
   app.post('/api/sync/run', async (request, reply) => {
     const body = (request.body ?? {}) as { gameId?: string; marketplace?: string };
-    const running = startCollection({
+    const job = await enqueueCollection({
       gameId: body.gameId,
       marketplace: body.marketplace,
       pruneMissing: true,
     });
-    if (!running) return reply.code(409).send({ error: 'Сбор уже выполняется' });
-    void running
-      .then((run) => {
-        app.log.info(
-          { gameId: run.gameId, seen: run.seen, created: run.created },
-          'Сбор завершён',
-        );
-      })
-      .catch((error: unknown) => {
-        app.log.error({ err: error }, 'Сбор завершился с ошибкой');
-      });
-    return reply.code(202).send({ started: true });
+    if (!job) return reply.code(409).send({ error: 'Сбор уже выполняется или ожидает запуска' });
+    return reply.code(202).send({ started: true, jobId: job.id });
   });
 };
