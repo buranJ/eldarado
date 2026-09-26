@@ -19,10 +19,12 @@ model User {
   updatedAt    DateTime @updatedAt
 
   sessions    UserSession[]
+  passwordResetTokens PasswordResetToken[]
   integrations IntegrationCredential[]
   inventory    InventoryItem[]
   decisions    UserListingDecision[]
   activity     ActivityEvent[]
+  saleSnapshots EldoradoSaleSnapshot[]
 }
 
 model UserSession {
@@ -35,6 +37,19 @@ model UserSession {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+/// Single-use password recovery tokens. Only a SHA-256 digest is stored.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([userId, expiresAt])
 }
 
 /// Per-user secrets are AES-256-GCM encrypted before they reach PostgreSQL.
@@ -185,6 +200,21 @@ model CollectionJob {
   @@index([gameId, status])
 }
 
+/// Cyrillic fragments that remain after rule-based translation. Operators can
+/// use the frequency and examples to extend each game's terminology safely.
+model TranslationObservation {
+  id          String   @id @default(cuid())
+  gameId      String
+  term        String
+  sampleTitle String
+  occurrences Int      @default(1)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+
+  @@unique([gameId, term])
+  @@index([gameId, occurrences])
+}
+
 /// Result of one analysis pass over a listing. Facts come from the model,
 /// every score is computed deterministically from those facts.
 model Analysis {
@@ -330,4 +360,29 @@ model MarketplaceListing {
 
   @@index([gameId, status])
   @@index([itemId])
+}
+
+/// Last verified state of an Eldorado order. It provides a durable audit trail
+/// even when the remote order later changes to refunded, disputed or canceled.
+model EldoradoSaleSnapshot {
+  id                  String   @id @default(cuid())
+  externalId          String
+  offerId             String
+  gameId              String
+  title               String
+  status              String
+  totalMinor          Int
+  currency            String
+  feeMinor            Int?
+  feeEstimated        Boolean  @default(true)
+  remoteCreatedAt     DateTime
+  remoteStateChangedAt DateTime?
+  firstSeenAt         DateTime @default(now())
+  lastVerifiedAt      DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String
+
+  @@unique([userId, externalId])
+  @@index([userId, gameId, status])
+  @@index([lastVerifiedAt])
 }

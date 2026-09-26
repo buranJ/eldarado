@@ -26,6 +26,12 @@ const mockApi = async (
       authenticated = true;
       return json(route, { user });
     }
+    if (path === '/api/auth/forgot-password') {
+      return json(route, {
+        ok: true,
+        message: 'Если профиль существует, инструкция отправлена на указанную почту.',
+      });
+    }
     if (path === '/api/auth/logout') {
       authenticated = false;
       return json(route, { ok: true });
@@ -94,6 +100,9 @@ const mockApi = async (
         anthropic: { configured: false, updatedAt: null },
       });
     }
+    if (path === '/api/operations/translation-observations') {
+      return json(route, { items: [], total: 0 });
+    }
     return json(route, {});
   });
 
@@ -111,6 +120,15 @@ test('operator can sign in and reach the dashboard', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Обзор', exact: true }).last()).toBeVisible();
   await expect(page.getByText('GameStock')).toBeVisible();
+});
+
+test('password recovery does not reveal whether an account exists', async ({ page }) => {
+  await mockApi(page, false);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Забыли пароль?' }).click();
+  await page.getByLabel('Электронная почта').fill('unknown@example.com');
+  await page.getByRole('button', { name: 'Отправить ссылку' }).click();
+  await expect(page.getByText('Если профиль существует')).toBeVisible();
 });
 
 test('game selection, collection and all production routes remain usable', async ({ page }) => {

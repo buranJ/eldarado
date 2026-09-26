@@ -61,6 +61,7 @@ export interface EldoradoSellerOrder {
   createdAt: string;
   stateChangedAt: string | null;
   totalPrice: { amount: number; currency: string };
+  fee: { amount: number; currency: string } | null;
 }
 
 interface OfferPage {
@@ -278,6 +279,17 @@ export class EldoradoClient {
       const offer = details as Record<string, unknown>;
       const orderState = state as Record<string, unknown>;
       const price = totalPrice as Record<string, unknown>;
+      const feeCandidate = order.sellerFee ?? order.marketplaceFee ?? order.commission ?? order.fee;
+      const feeRecord =
+        typeof feeCandidate === 'object' && feeCandidate !== null
+          ? (feeCandidate as Record<string, unknown>)
+          : null;
+      const fee =
+        feeRecord &&
+        typeof feeRecord.amount === 'number' &&
+        typeof feeRecord.currency === 'string'
+          ? { amount: feeRecord.amount, currency: feeRecord.currency }
+          : null;
       if (
         typeof offer.gameId !== 'string' ||
         typeof offer.offerTitle !== 'string' ||
@@ -299,6 +311,7 @@ export class EldoradoClient {
         stateChangedAt:
           typeof orderState.createdDate === 'string' ? orderState.createdDate : null,
         totalPrice: { amount: price.amount, currency: price.currency },
+        fee,
       }];
     });
   }

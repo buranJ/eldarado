@@ -6,6 +6,7 @@ import { PREFILTER } from '../config/prefilter.js';
 import { funPayAdapter } from '../adapters/source/funpay/index.js';
 import type { RawOffer, SourceAdapter, SourceImage } from '../adapters/source/types.js';
 import { deleteSourceImages, saveSourceImage } from '../lib/source-images.js';
+import { recordTranslationObservations } from '../localization/observations.js';
 
 const ADAPTERS: SourceAdapter[] = [funPayAdapter];
 
@@ -80,6 +81,8 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
       throw new Error('Источник не вернул ни одного объявления; очистка базы отменена');
     }
     counters.seen = offers.length;
+
+    if (!options.dryRun) await recordTranslationObservations(gameId, offers);
 
     if (options.dryRun) {
       for (const offer of offers.slice(0, options.maxListings ?? offers.length)) {

@@ -83,10 +83,20 @@ docker compose --env-file .env.production up -d
 
 Always test restoration on a separate database before using it against production.
 
+### Off-site S3 backup
+
+Set `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`. For Cloudflare R2,
+Backblaze B2 and other compatible services also set `S3_ENDPOINT`, `S3_PROVIDER`
+and `S3_REGION`. Each completed local archive is copied to
+`s3://S3_BUCKET/S3_PREFIX/TIMESTAMP`. Configure lifecycle retention in the
+storage provider; local cleanup never deletes remote archives.
+
 ## Monitoring
 
 The `monitor` service checks the API health endpoint, web container, FunPay,
-Eldorado and disk usage every five minutes. It logs only state changes. Set
+Eldorado, disk usage, backup freshness and TLS certificate expiration every five minutes.
+Set `MONITOR_TLS_HOST` to the public hostname and adjust
+`MONITOR_TLS_EXPIRY_DAYS` when needed. It logs only state changes. Set
 `MONITOR_WEBHOOK_URL` to receive outage, recovery and unhandled API-error messages.
 The endpoint must accept a JSON object with a `text` field. Inspect status with:
 
@@ -97,3 +107,15 @@ curl --fail https://your-domain.example/api/health
 ```
 
 The API health response includes PostgreSQL latency and storage free-space data.
+
+## Password recovery
+
+Set all `SMTP_*` values from `.env.production.example`. Recovery stays disabled
+when even one required SMTP value is absent. The public endpoint always returns
+the same message, so it does not disclose whether an email is registered.
+
+## Error analytics
+
+Set `SENTRY_DSN` for API and worker errors and `VITE_SENTRY_DSN` for browser
+errors. The frontend DSN is intentionally compiled into the public web bundle;
+it is not a secret. Rebuild the containers after changing either value.

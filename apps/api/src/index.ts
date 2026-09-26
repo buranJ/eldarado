@@ -1,3 +1,4 @@
+import './instrumentation.js';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -19,6 +20,9 @@ import './auth/types.js';
 import { startCollectionWorker } from './pipeline/sync-runner.js';
 import { healthReport } from './lib/health.js';
 import { reportOperationalError } from './lib/error-monitor.js';
+import { Sentry } from './instrumentation.js';
+import { mailConfigured } from './lib/mailer.js';
+import { registerOperationsRoutes } from './routes/operations.js';
 
 const app = Fastify({
   logger: { transport: { target: 'pino-pretty' } },
@@ -32,7 +36,7 @@ await app.register(helmet, {
     directives: {
       defaultSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'blob:'],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", 'https://*.ingest.sentry.io'],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
     },
@@ -50,7 +54,9 @@ app.addHook('onRequest', async (request, reply) => {
   const publicPath =
     request.url === '/api/health' ||
     request.url === '/api/auth/login' ||
-    request.url === '/api/auth/register';
+    request.url === '/api/auth/register' ||
+    request.url === '/api/auth/forgot-password' ||
+    request.url === '/api/auth/reset-password';
   if (!publicPath && !request.user) {
     return reply.code(401).send({ error: 'Требуется вход в профиль' });
   }
@@ -66,7 +72,12 @@ app.addHook('onRequest', async (request, reply) => {
 app.get('/api/health', async (_request, reply) => {
   const report = await healthReport();
   if (!report.ok) reply.code(503);
-  return { ...report, aiConfigured: env.anthropicApiKey !== null };
+  return {
+    ...report,
+    aiConfigured: env.anthropicApiKey !== null,
+    passwordRecoveryConfigured: mailConfigured(),
+    errorTrackingConfigured: env.sentryDsn !== null,
+  };
 });
 
 app.addHook('onError', async (request, _reply, error) => {
@@ -75,6 +86,9 @@ app.addHook('onError', async (request, _reply, error) => {
     'Необработанная ошибка запроса',
   );
   reportOperationalError({ method: request.method, url: request.url, message: error.message });
+  Sentry.captureException(error, {
+    tags: { method: request.method, route: request.routeOptions.url ?? request.url },
+  });
 });
 
 registerAuthRoutes(app);
@@ -96,6 +110,7 @@ registerDecisionRoutes(app);
 registerInventoryRoutes(app);
 registerOverviewRoutes(app);
 registerDestinationRoutes(app);
+registerOperationsRoutes(app);
 
 const shutdown = async (): Promise<void> => {
   await scheduler.destroy();

@@ -59,3 +59,22 @@ export const translateWithRules = (
 
   return hasUsefulContent(translated) ? translated : fallback;
 };
+
+const RUSSIAN_STOP_WORDS = new Set([
+  'и', 'или', 'в', 'во', 'на', 'с', 'со', 'без', 'для', 'по', 'до', 'из', 'за',
+  'под', 'над', 'при', 'не', 'нет', 'есть', 'все', 'всё', 'очень', 'ещё', 'уже',
+]);
+
+/** Finds untranslated words before Cyrillic is stripped from the buyer-facing title. */
+export const untranslatedCyrillicTerms = (
+  source: string,
+  rules: readonly TranslationRule[],
+): string[] => {
+  let remainder = source.normalize('NFKC');
+  for (const [pattern] of rules) remainder = remainder.replace(pattern, ' ');
+  return [...new Set(
+    (remainder.match(/\p{Script=Cyrillic}{2,}/gu) ?? [])
+      .map((term) => term.toLocaleLowerCase('ru-RU'))
+      .filter((term) => !RUSSIAN_STOP_WORDS.has(term)),
+  )];
+};

@@ -3,6 +3,7 @@ import type { ScheduledTask } from 'node-cron';
 import { FUNPAY_CATEGORIES } from './adapters/source/funpay/config.js';
 import { readSyncSettings, writeSyncSettings } from './lib/sync-settings.js';
 import { enqueueCollection } from './pipeline/sync-runner.js';
+import { Sentry } from './instrumentation.js';
 
 export interface SyncScheduler {
   status(): { autoSyncEnabled: boolean; nextRunAt: string | null };
@@ -28,6 +29,7 @@ export const startScheduler = async (log: (message: string) => void): Promise<Sy
       }
       log(`Плановый сбор: в очередь добавлено ${queued} игр`);
     } catch (error) {
+      Sentry.captureException(error, { tags: { worker: 'scheduler' } });
       log(`Плановый сбор: ошибка — ${error instanceof Error ? error.message : error}`);
     }
   });

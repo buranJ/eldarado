@@ -199,6 +199,13 @@ export interface IntegrationStatus {
   anthropic: { configured: boolean; updatedAt: string | null };
 }
 
+export interface TranslationObservation {
+  term: string;
+  occurrences: number;
+  sampleTitle: string;
+  lastSeenAt: string;
+}
+
 export const api = {
   me: () => request<{ user: ProfileUser }>('/auth/me'),
   login: (email: string, password: string) =>
@@ -217,7 +224,21 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
+  forgotPassword: (email: string) =>
+    request<{ ok: true; message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token: string, newPassword: string) =>
+    request<{ ok: true }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
   integrations: () => request<IntegrationStatus>('/profile/integrations'),
+  translationObservations: (gameId: string, limit = 20) =>
+    request<{ items: TranslationObservation[]; total: number }>(
+      `/operations/translation-observations?gameId=${encodeURIComponent(gameId)}&limit=${limit}`,
+    ),
   saveEldoradoCredentials: (clientId: string, clientSecret: string) =>
     request<{ configured: true; clientIdMask: string }>('/profile/integrations/eldorado', {
       method: 'PUT',

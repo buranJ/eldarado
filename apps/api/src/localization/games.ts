@@ -1,9 +1,10 @@
 import {
   COMMON_ACCOUNT_RULES,
   translateWithRules,
+  untranslatedCyrillicTerms,
   type TranslationRule,
 } from './rule-based.js';
-import { translateClashRoyaleTitle } from './clash-royale.js';
+import { CLASH_ROYALE_RULES, translateClashRoyaleTitle } from './clash-royale.js';
 
 const PUBG_RULES: readonly TranslationRule[] = [
   [/пабг\s*(?:мобайл)?/giu, 'PUBG Mobile'],
@@ -222,6 +223,24 @@ const ARKNIGHTS_RULES: readonly TranslationRule[] = [
 
 const translate = (source: string, rules: readonly TranslationRule[], fallback: string): string =>
   translateWithRules(source, [...rules, ...COMMON_ACCOUNT_RULES], fallback);
+
+const rulesForGame = (gameId: string): readonly TranslationRule[] | null => {
+  switch (gameId) {
+    case 'clash-royale': return CLASH_ROYALE_RULES;
+    case 'pubg-mobile': return PUBG_RULES;
+    case 'car-parking-multiplayer': return CAR_PARKING_RULES;
+    case 'arknights-endfield': return ENDFIELD_RULES;
+    case 'standoff-2': return STANDOFF_RULES;
+    case 'eldorado-179': return JJK_PHANTOM_PARADE_RULES;
+    case 'eldorado-166': return ARKNIGHTS_RULES;
+    default: return null;
+  }
+};
+
+export const findUntranslatedGameTerms = (gameId: string, source: string): string[] => {
+  const rules = rulesForGame(gameId);
+  return rules ? untranslatedCyrillicTerms(source, [...rules, ...COMMON_ACCOUNT_RULES]) : [];
+};
 
 export const translateGameTitle = (gameId: string, source: string): string => {
   switch (gameId) {

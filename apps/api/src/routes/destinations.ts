@@ -15,6 +15,7 @@ import { prisma } from '../lib/db.js';
 import { sourceImagePath } from '../lib/source-images.js';
 import { convertMinor, DESTINATION_FEE_RATE } from '../config/marketplaces.js';
 import { translateGameTitle } from '../localization/games.js';
+import { calculateSaleFinancials } from '../sales/financials.js';
 
 const optionalField = (max: number) => z.string().max(max).optional();
 
@@ -270,27 +271,81 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
         ),
       );
 
+      await Promise.all(
+        orders.map(async (order) => {
+          const status = saleState(order.state);
+          const local = localByOfferId.get(order.offerId);
+          const totalMinor = Math.round(order.totalPrice.amount * 100);
+          const actualFee = order.fee?.currency === order.totalPrice.currency
+            ? Math.round(order.fee.amount * 100)
+            : null;
+          const estimatedFee = Math.round(totalMinor * DESTINATION_FEE_RATE);
+          await prisma.eldoradoSaleSnapshot.upsert({
+            where: {
+              userId_externalId: { userId: request.user!.id, externalId: order.id },
+            },
+            create: {
+              userId: request.user!.id,
+              externalId: order.id,
+              offerId: order.offerId,
+              gameId: internalGameId(order.gameId),
+              title: order.title,
+              status,
+              totalMinor,
+              currency: order.totalPrice.currency,
+              feeMinor: actualFee ?? estimatedFee,
+              feeEstimated: actualFee === null,
+              remoteCreatedAt: new Date(order.createdAt),
+              remoteStateChangedAt: order.stateChangedAt ? new Date(order.stateChangedAt) : null,
+            },
+            update: {
+              offerId: order.offerId,
+              title: order.title,
+              status,
+              totalMinor,
+              currency: order.totalPrice.currency,
+              feeMinor: actualFee ?? estimatedFee,
+              feeEstimated: actualFee === null,
+              remoteStateChangedAt: order.stateChangedAt ? new Date(order.stateChangedAt) : null,
+            },
+          });
+          if (local) {
+            const settled = status === 'completed' || status === 'pending_payout';
+            const listingStatus = settled ? 'sold' : status;
+            await prisma.$transaction([
+              prisma.marketplaceListing.update({
+                where: { id: local.id },
+                data: { status: listingStatus, error: null },
+              }),
+              ...(settled
+                ? [
+                    prisma.inventoryItem.update({
+                      where: { id: local.itemId },
+                      data: { status: 'sold' },
+                    }),
+                  ]
+                : []),
+            ]);
+          }
+        }),
+      );
+
       const items = orders.flatMap((order) => {
         const gameId = internalGameId(order.gameId);
         if (query.gameId && query.gameId !== gameId) return [];
         const local = localByOfferId.get(order.offerId);
         const status = saleState(order.state);
-        const financiallySettled = status === 'completed' || status === 'pending_payout';
-        const feeMinor =
-          local && financiallySettled
-            ? Math.round(order.totalPrice.amount * 100 * DESTINATION_FEE_RATE)
-            : null;
-        const purchaseInSaleCurrencyMinor = local
-          ? convertMinor(local.purchaseMinor, local.purchaseCurrency, order.totalPrice.currency)
+        const actualFeeMinor = order.fee?.currency === order.totalPrice.currency
+          ? Math.round(order.fee.amount * 100)
           : null;
-        const netProfitMinor =
-          feeMinor !== null && purchaseInSaleCurrencyMinor !== null
-            ? Math.round(order.totalPrice.amount * 100) - feeMinor - purchaseInSaleCurrencyMinor
-            : null;
-        const roiPercent =
-          netProfitMinor !== null && purchaseInSaleCurrencyMinor && purchaseInSaleCurrencyMinor > 0
-            ? Math.round((netProfitMinor / purchaseInSaleCurrencyMinor) * 1_000) / 10
-            : null;
+        const financials = calculateSaleFinancials({
+          status,
+          totalMinor: Math.round(order.totalPrice.amount * 100),
+          saleCurrency: order.totalPrice.currency,
+          purchaseMinor: local?.purchaseMinor ?? null,
+          purchaseCurrency: local?.purchaseCurrency ?? null,
+          actualFeeMinor,
+        });
 
         return [{
           id: order.id,
@@ -304,16 +359,18 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
             : null,
           salePrice: order.totalPrice,
           fees:
-            feeMinor === null
+            financials.feeMinor === null
               ? null
-              : { amount: feeMinor / 100, currency: order.totalPrice.currency },
+              : { amount: financials.feeMinor / 100, currency: order.totalPrice.currency },
+          feeEstimated: financials.feeEstimated,
           netProfit:
-            netProfitMinor === null
+            financials.netProfitMinor === null
               ? null
-              : { amount: netProfitMinor / 100, currency: order.totalPrice.currency },
-          roiPercent,
+              : { amount: financials.netProfitMinor / 100, currency: order.totalPrice.currency },
+          roiPercent: financials.roiPercent,
           soldAt: order.stateChangedAt ?? order.createdAt,
           status,
+          lastVerifiedAt: new Date().toISOString(),
           url: `https://www.eldorado.gg/order/${encodeURIComponent(order.id)}`,
         }];
       });

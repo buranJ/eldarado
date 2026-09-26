@@ -38,6 +38,14 @@ services:
       ELDORADO_CLIENT_ID: ${ELDORADO_CLIENT_ID:-}
       ELDORADO_CLIENT_SECRET: ${ELDORADO_CLIENT_SECRET:-}
       MONITOR_WEBHOOK_URL: ${MONITOR_WEBHOOK_URL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     healthcheck:
       test:
         [
@@ -61,6 +69,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     restart: unless-stopped
     depends_on:
       api:
@@ -76,7 +86,9 @@ services:
       - internal
 
   backup:
-    image: postgres:17-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
     restart: unless-stopped
     depends_on:
       db:
@@ -89,6 +101,14 @@ services:
       BACKUP_DIR: /backups
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-1}
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_MIN_AGE_SECONDS: ${BACKUP_MIN_AGE_SECONDS:-82800}
+      S3_PROVIDER: ${S3_PROVIDER:-Other}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_REGION: ${S3_REGION:-auto}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_PREFIX: ${S3_PREFIX:-gamestock/}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
     command:
       - /bin/sh
       - -c
@@ -112,10 +132,14 @@ services:
       MONITOR_INTERVAL_SECONDS: ${MONITOR_INTERVAL_SECONDS:-300}
       MONITOR_DISK_USED_PERCENT: ${MONITOR_DISK_USED_PERCENT:-85}
       MONITOR_WEBHOOK_URL: ${MONITOR_WEBHOOK_URL:-}
-    command: ["/bin/sh", "-c", "apk add --no-cache curl >/dev/null && exec /scripts/monitor.sh"]
+      MONITOR_TLS_HOST: ${MONITOR_TLS_HOST:-}
+      MONITOR_TLS_EXPIRY_DAYS: ${MONITOR_TLS_EXPIRY_DAYS:-14}
+      MONITOR_BACKUP_MAX_AGE_SECONDS: ${MONITOR_BACKUP_MAX_AGE_SECONDS:-129600}
+    command: ["/bin/sh", "-c", "apk add --no-cache curl openssl >/dev/null && exec /scripts/monitor.sh"]
     volumes:
       - ./scripts:/scripts:ro
       - ${GAMESTOCK_DATA_DIR:-./data}:/data:ro
+      - ${GAMESTOCK_BACKUP_DIR:-./backups/automatic}:/backups:ro
     networks:
       - internal
 

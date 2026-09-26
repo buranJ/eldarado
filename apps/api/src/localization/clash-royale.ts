@@ -6,7 +6,7 @@ import { translateWithRules, type TranslationRule } from './rule-based.js';
  * it intentionally does not call a general-purpose translator or send source
  * text to a third party.
  */
-const RULES: readonly TranslationRule[] = [
+export const CLASH_ROYALE_RULES: readonly TranslationRule[] = [
   [/clash\s+royal(?:e)?/giu, 'Clash Royale'],
   [/кл[еэё]ш(?:\s+роял[ье])?|кл[еэё]шк(?:а|е|у|ой)/giu, 'Clash Royale'],
   [/королевск(?:ая|ой)\s+башн(?:я|и)/giu, 'King Tower'],
@@ -111,7 +111,7 @@ const RULES: readonly TranslationRule[] = [
  * omitted rather than shown to an English-only buyer as misleading gibberish.
  */
 export const translateClashRoyaleTitle = (source: string): string => {
-  const translated = translateWithRules(source, RULES, 'Clash Royale account');
+  const translated = translateWithRules(source, CLASH_ROYALE_RULES, 'Clash Royale account');
   return translated.replace(
     /(\d+(?:[.,]\d+)?)\s*[кk]\s+(?=(?:trophies|Gems|Gold)\b)/giu,
     '$1K ',

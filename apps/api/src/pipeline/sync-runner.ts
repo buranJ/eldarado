@@ -1,6 +1,7 @@
 import { prisma } from '../lib/db.js';
 import { collect } from './collect.js';
 import type { CollectOptions } from './collect.js';
+import { Sentry } from '../instrumentation.js';
 
 const POLL_INTERVAL_MS = 1_000;
 const RETRY_DELAY_MS = 5_000;
@@ -95,6 +96,7 @@ export const startCollectionWorker = async (
           `прошло фильтр ${run.passed}, удалено ${run.disappeared}`,
       );
     } catch (error) {
+      Sentry.captureException(error, { tags: { worker: 'collection', gameId: job.gameId } });
       const message = error instanceof Error ? error.message : String(error);
       const shouldRetry = job.attempts + 1 < job.maxAttempts;
       await prisma.collectionJob.update({
@@ -118,6 +120,7 @@ export const startCollectionWorker = async (
         const found = await runNext();
         if (!found) await sleep(POLL_INTERVAL_MS);
       } catch (error) {
+        Sentry.captureException(error, { tags: { worker: 'collection-loop' } });
         log(`Очередь сбора: ошибка рабочего цикла — ${error instanceof Error ? error.message : error}`);
         await sleep(RETRY_DELAY_MS);
       }

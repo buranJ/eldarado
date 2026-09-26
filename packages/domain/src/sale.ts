@@ -16,9 +16,12 @@ export interface Sale {
   salePrice: Money;
   /** Available only when the order can be matched to a local listing. */
   fees: Money | null;
+  /** True when Eldorado did not expose a fee and the configured rate was used. */
+  feeEstimated?: boolean;
   netProfit: Money | null;
   roiPercent: number | null;
   soldAt: string;
   status: SaleStatus;
+  lastVerifiedAt?: string;
   url?: string | null;
 }

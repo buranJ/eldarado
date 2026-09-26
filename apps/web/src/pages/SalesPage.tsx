@@ -125,7 +125,14 @@ export function SalesPage() {
       align: 'right',
       width: 88,
       sortable: true,
-      render: (row) => <span className="num text-ink-3">−{formatMoney(row.fees)}</span>,
+      render: (row) => (
+        <span
+          className="num text-ink-3"
+          title={row.feeEstimated ? 'Расчёт по ставке площадки' : 'Фактическая комиссия Eldorado'}
+        >
+          −{formatMoney(row.fees)}{row.feeEstimated ? '*' : ''}
+        </span>
+      ),
     },
     {
       key: 'netProfit',
@@ -249,7 +256,9 @@ export function SalesPage() {
 
       <p className="text-[11px] text-ink-4">
         Для заказов, созданных вручную вне GameStock, цена закупки, комиссия, прибыль и ROI
-        неизвестны и отмечены прочерком.
+        неизвестны и отмечены прочерком. Комиссия со звёздочкой рассчитана по ставке площадки,
+        если Eldorado не вернул фактическую комиссию в данных заказа. Статусы сверяются с Eldorado
+        при каждом открытии страницы.
       </p>
     </div>
   );

@@ -26,4 +26,14 @@ export const env = {
   eldoradoClientId: optional('ELDORADO_CLIENT_ID'),
   eldoradoClientSecret: optional('ELDORADO_CLIENT_SECRET'),
   monitorWebhookUrl: optional('MONITOR_WEBHOOK_URL'),
+  sentryDsn: optional('SENTRY_DSN'),
+  sentryEnvironment: optional('SENTRY_ENVIRONMENT') ?? process.env.NODE_ENV ?? 'development',
+  smtp: {
+    host: optional('SMTP_HOST'),
+    port: Number(process.env.SMTP_PORT ?? 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: optional('SMTP_USER'),
+    pass: optional('SMTP_PASSWORD'),
+    from: optional('SMTP_FROM'),
+  },
 };

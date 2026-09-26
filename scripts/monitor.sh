@@ -4,6 +4,9 @@ set -eu
 interval=${MONITOR_INTERVAL_SECONDS:-300}
 disk_limit=${MONITOR_DISK_USED_PERCENT:-85}
 state_file=/tmp/gamestock-monitor.state
+tls_host=${MONITOR_TLS_HOST:-}
+tls_expiry_days=${MONITOR_TLS_EXPIRY_DAYS:-14}
+backup_max_age=${MONITOR_BACKUP_MAX_AGE_SECONDS:-129600}
 
 notify() {
   level=$1
@@ -35,12 +38,36 @@ check_eldorado_api() {
   esac
 }
 
+check_tls() {
+  [ -z "$tls_host" ] && return
+  seconds=$((tls_expiry_days * 86400))
+  if ! printf '' | openssl s_client -connect "$tls_host:443" -servername "$tls_host" 2>/dev/null \
+    | openssl x509 -noout -checkend "$seconds" >/dev/null 2>&1; then
+    failures="$failures tls:$tls_host"
+  fi
+}
+
+check_backup() {
+  latest=$(find /backups -mindepth 1 -maxdepth 1 -type d | sort | tail -1)
+  if [ -z "$latest" ]; then
+    failures="$failures backup:missing"
+    return
+  fi
+  modified=$(stat -c %Y "$latest" 2>/dev/null || printf '0')
+  age=$(($(date +%s) - modified))
+  if [ "$modified" -eq 0 ] || [ "$age" -gt "$backup_max_age" ]; then
+    failures="$failures backup:stale"
+  fi
+}
+
 while true; do
   failures=''
   check_url api http://api:3001/api/health
   check_url web http://web/healthz
   check_url funpay https://funpay.com/lots/149/
   check_eldorado_api
+  check_tls
+  check_backup
 
   disk_used=$(df -P /data | awk 'NR == 2 { gsub(/%/, "", $5); print $5 }')
   if [ -z "$disk_used" ] || [ "$disk_used" -ge "$disk_limit" ]; then

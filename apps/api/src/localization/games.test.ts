@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { translateGameTitle } from './games.js';
+import { findUntranslatedGameTerms, translateGameTitle } from './games.js';
 
 test('translates real JJK marketplace terminology without Cyrillic leftovers', () => {
   const translated = translateGameTitle(
@@ -85,4 +85,13 @@ test('translates real Standoff 2 terminology', () => {
   assert.match(translated, /many Medals/i);
   assert.match(translated, /attached screenshots/i);
   assert.doesNotMatch(translated, /\p{Script=Cyrillic}/u);
+});
+
+test('collects only still-unknown Cyrillic terms for dictionary maintenance', () => {
+  const terms = findUntranslatedGameTerms(
+    'pubg-mobile',
+    'Аренда, X-костюм, новый термин Бронемобиль',
+  );
+  assert.deepEqual(terms.sort(), ['бронемобиль', 'новый', 'термин']);
+  assert.doesNotMatch(terms.join(' '), /аренда|костюм/u);
 });

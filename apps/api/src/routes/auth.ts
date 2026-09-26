@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { hashPassword, verifyPassword } from '../auth/password.js';
 import { clearSession, createSession } from '../auth/session.js';
+import { createPasswordResetToken, hashPasswordResetToken } from '../auth/reset-token.js';
+import { mailConfigured, sendPasswordResetEmail } from '../lib/mailer.js';
 import { env } from '../lib/env.js';
 import { prisma } from '../lib/db.js';
 import { saveCredentials } from '../lib/credentials.js';
@@ -17,6 +19,15 @@ const registerSchema = credentialsSchema.extend({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(10).max(200),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.email().trim().toLowerCase().max(254),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(32).max(200),
   newPassword: z.string().min(10).max(200),
 });
 
@@ -74,6 +85,74 @@ export const registerAuthRoutes = (app: FastifyInstance): void => {
     return { user: publicUser(user) };
   });
 
+  app.post('/api/auth/forgot-password', publicRateLimit, async (request) => {
+    const input = forgotPasswordSchema.parse(request.body ?? {});
+    const generic = {
+      ok: true,
+      message: 'Если профиль существует, инструкция отправлена на указанную почту.',
+    } as const;
+    if (!mailConfigured()) {
+      request.log.warn('Запрос восстановления принят, но SMTP ещё не настроен');
+      return generic;
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: input.email } });
+    if (!user) return generic;
+    const reset = createPasswordResetToken();
+    const row = await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: reset.tokenHash,
+        expiresAt: reset.expiresAt,
+      },
+    });
+    try {
+      await sendPasswordResetEmail({
+        email: user.email,
+        displayName: user.displayName,
+        token: reset.token,
+      });
+      await prisma.passwordResetToken.deleteMany({
+        where: { userId: user.id, id: { not: row.id }, usedAt: null },
+      });
+    } catch (error) {
+      await prisma.passwordResetToken.delete({ where: { id: row.id } });
+      request.log.error({ err: error }, 'Не удалось отправить письмо восстановления пароля');
+    }
+    return generic;
+  });
+
+  app.post('/api/auth/reset-password', publicRateLimit, async (request, reply) => {
+    const input = resetPasswordSchema.parse(request.body ?? {});
+    const tokenHash = hashPasswordResetToken(input.token);
+    const passwordHash = await hashPassword(input.newPassword);
+    const reset = await prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      select: { id: true, userId: true, usedAt: true, expiresAt: true },
+    });
+    if (!reset || reset.usedAt || reset.expiresAt <= new Date()) {
+      return reply.code(400).send({ error: 'Ссылка недействительна или срок её действия истёк' });
+    }
+
+    const consumed = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.passwordResetToken.updateMany({
+        where: { id: reset.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() },
+      });
+      if (claimed.count !== 1) return false;
+      await tx.user.update({ where: { id: reset.userId }, data: { passwordHash } });
+      await tx.userSession.deleteMany({ where: { userId: reset.userId } });
+      await tx.passwordResetToken.deleteMany({
+        where: { userId: reset.userId, id: { not: reset.id } },
+      });
+      return true;
+    });
+    if (!consumed) {
+      return reply.code(400).send({ error: 'Ссылка уже была использована' });
+    }
+    return { ok: true };
+  });
+
   app.post('/api/auth/logout', async (request, reply) => {
     await clearSession(request, reply);
     return { ok: true };
@@ -100,6 +179,7 @@ export const registerAuthRoutes = (app: FastifyInstance): void => {
         data: { passwordHash: await hashPassword(input.newPassword) },
       }),
       prisma.userSession.deleteMany({ where: { userId: user.id } }),
+      prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
     ]);
     await createSession(user.id, reply);
     return { ok: true };

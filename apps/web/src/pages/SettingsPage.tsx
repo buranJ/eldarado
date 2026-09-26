@@ -13,7 +13,7 @@ import { SCAN_INTERVAL_HOURS, SUPPORTED_CURRENCIES } from '@/config/app';
 import { useAppState } from '@/app/providers/app-state-context';
 import { useAuth } from '@/app/providers/auth-context';
 import { useToast } from '@/app/providers/toast-context';
-import { api, type IntegrationStatus } from '@/api/client';
+import { api, type IntegrationStatus, type TranslationObservation } from '@/api/client';
 import type { CurrencyCode } from '@gamestock/domain';
 
 const CURRENCY_LABELS: Record<CurrencyCode, string> = {
@@ -23,7 +23,7 @@ const CURRENCY_LABELS: Record<CurrencyCode, string> = {
 };
 
 export function SettingsPage() {
-  const { baseCurrency, setBaseCurrency } = useAppState();
+  const { baseCurrency, setBaseCurrency, gameId } = useAppState();
   const { user, logout } = useAuth();
   const toast = useToast();
   const [integrations, setIntegrations] = useState<IntegrationStatus | null>(null);
@@ -33,6 +33,7 @@ export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
+  const [translationTerms, setTranslationTerms] = useState<TranslationObservation[]>([]);
 
   const refreshIntegrations = () =>
     api.integrations().then(setIntegrations).catch(() => setIntegrations(null));
@@ -40,6 +41,12 @@ export function SettingsPage() {
   useEffect(() => {
     void refreshIntegrations();
   }, []);
+
+  useEffect(() => {
+    api.translationObservations(gameId, 12)
+      .then((result) => setTranslationTerms(result.items ?? []))
+      .catch(() => setTranslationTerms([]));
+  }, [gameId]);
 
   const saveEldorado = async () => {
     setSaving('eldorado');
@@ -109,6 +116,32 @@ export function SettingsPage() {
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
         <div className="space-y-4">
+          <Panel>
+            <PanelHeader
+              title="Словарь перевода"
+              subtitle="Нераспознанные термины из реальных объявлений выбранной игры"
+            />
+            {translationTerms.length ? (
+              <ul className="divide-y divide-line">
+                {translationTerms.map((item) => (
+                  <li key={item.term} className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[12.5px] font-medium text-ink">{item.term}</span>
+                      <Badge tone="muted">{item.occurrences}</Badge>
+                    </div>
+                    <p className="mt-1 truncate text-[11px] text-ink-4" title={item.sampleTitle}>
+                      {item.sampleTitle}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-4 py-5 text-[12px] text-ink-4">
+                Новых нераспознанных терминов пока нет.
+              </p>
+            )}
+          </Panel>
+
           <Panel>
             <PanelHeader
               title="Профиль"
