@@ -13,7 +13,9 @@ const SIDEBAR_STATE_KEY = 'gamestock.sidebar.collapsed';
 
 const initialCollapsedState = (): boolean => {
   try {
-    return window.localStorage.getItem(SIDEBAR_STATE_KEY) === 'true';
+    const saved = window.localStorage.getItem(SIDEBAR_STATE_KEY);
+    if (saved !== null) return saved === 'true';
+    return window.matchMedia('(max-width: 767px)').matches;
   } catch {
     return false;
   }

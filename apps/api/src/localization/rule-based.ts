@@ -30,6 +30,9 @@ export const COMMON_ACCOUNT_RULES: readonly TranslationRule[] = [
   [/чек(?:ай)?\s+(?:опис|описание)|чит(?:ай|айте)\s+описание/giu, 'see description'],
   [/(?:уровень|уровня|ур|лвл)(?!\p{L})/giu, 'LVL'],
   [/торг\s+есть/giu, 'negotiable'],
+  [/гаранти(?:я|и)/giu, 'guarantee'],
+  [/описани(?:е|я)/giu, 'description'],
+  [/все\s+на\s+(?:картинк(?:ах|е)|screenshots)/giu, 'see screenshots'],
 ];
 
 const hasUsefulContent = (value: string): boolean => /[a-z\d]/iu.test(value);

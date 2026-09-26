@@ -5,9 +5,14 @@ const user = { id: 'user-e2e', email: 'operator@example.com', displayName: 'Oper
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
-const mockApi = async (page: Page, initiallyAuthenticated = true) => {
+const mockApi = async (
+  page: Page,
+  initiallyAuthenticated = true,
+  inventoryItems: unknown[] = [],
+) => {
   let authenticated = initiallyAuthenticated;
   const syncRequests: string[] = [];
+  const publishRequests: string[] = [];
 
   await page.route('http://127.0.0.1:5173/api/**', async (route) => {
     const request = route.request();
@@ -48,8 +53,32 @@ const mockApi = async (page: Page, initiallyAuthenticated = true) => {
     if (path === '/api/activity') return json(route, []);
     if (path === '/api/top' || path === '/api/qualified') return json(route, { items: [], total: 0 });
     if (path === '/api/listings') return json(route, { items: [], total: 0, page: 1, pageSize: 25 });
+    if (/^\/api\/inventory\/[^/]+\/eldorado\/preview$/.test(path)) {
+      return json(route, {
+        title: 'Production-ready account',
+        description: 'Account details',
+        gameId: '52',
+        currency: 'USD',
+        automaticDelivery: true,
+        sourceImageUrls: ['/api/listings/listing-e2e/images/1', '/api/listings/listing-e2e/images/2'],
+      });
+    }
+    if (/^\/api\/inventory\/[^/]+\/eldorado\/publish$/.test(path)) {
+      publishRequests.push(request.postData() ?? '');
+      const itemId = path.split('/')[3];
+      return json(route, {
+        offerId: `offer-${itemId}`,
+        url: `https://www.eldorado.gg/test/oa/offer-${itemId}`,
+        publishedAt: new Date().toISOString(),
+      });
+    }
     if (path === '/api/inventory') {
-      return json(route, { items: [], total: 0, capitalMinor: 0, expectedRevenueMinor: 0 });
+      return json(route, {
+        items: inventoryItems,
+        total: inventoryItems.length,
+        capitalMinor: inventoryItems.length * 1_000,
+        expectedRevenueMinor: inventoryItems.length * 2_500,
+      });
     }
     if (path === '/api/destinations/eldorado/listings') {
       return json(route, { items: [], total: 0, remoteError: null });
@@ -68,7 +97,7 @@ const mockApi = async (page: Page, initiallyAuthenticated = true) => {
     return json(route, {});
   });
 
-  return { syncRequests };
+  return { syncRequests, publishRequests };
 };
 
 test('operator can sign in and reach the dashboard', async ({ page }) => {
@@ -115,4 +144,48 @@ test('game selection, collection and all production routes remain usable', async
   await expect(page.getByRole('button', { name: 'Показать навигацию' })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('button', { name: 'Показать навигацию' })).toBeVisible();
+});
+
+test('bulk Eldorado publication prepares and publishes every selected account', async ({ page }) => {
+  const inventoryItems = ['one', 'two'].map((suffix, index) => ({
+    id: `item-${suffix}`,
+    accountId: `account-${suffix}`,
+    listingId: `listing-${suffix}`,
+    gameId: 'clash-royale',
+    title: `Account ${suffix}`,
+    url: `https://funpay.com/lots/offer?id=${index + 1}`,
+    purchase: {
+      marketplace: 'funpay',
+      price: { amount: 1_000, currency: 'RUB' },
+      purchasedAt: new Date().toISOString(),
+      orderRef: null,
+      operator: 'e2e',
+    },
+    resale: {
+      marketplace: 'eldorado',
+      recommendedPrice: { amount: 2_500, currency: 'RUB' },
+      manualPrice: null,
+    },
+    expectedProfit: { amount: 1_250, currency: 'RUB' },
+    scores: null,
+    status: 'purchased',
+    updatedAt: new Date().toISOString(),
+  }));
+  const api = await mockApi(page, true, inventoryItems);
+  await page.goto('/inventory');
+
+  await page.getByRole('checkbox', { name: 'Выбрать все готовые аккаунты' }).check();
+  await page.getByRole('button', { name: 'Опубликовать на Eldorado' }).click();
+  await expect(page.getByRole('heading', { name: 'Массовая публикация на Eldorado' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Опубликовать 2' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Опубликовать 2' }).click();
+
+  await expect(page.getByText('Опубликовано:')).toBeVisible({ timeout: 15_000 });
+  expect(api.publishRequests).toHaveLength(2);
+  for (const raw of api.publishRequests) {
+    const input = JSON.parse(raw) as Record<string, unknown>;
+    expect(input.termsAccepted).toBe(true);
+    expect(input.rulesAccepted).toBe(true);
+    expect(String(input.accountLogin)).toMatch(/@gmail\.com$/);
+  }
 });

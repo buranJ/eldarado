@@ -30,3 +30,59 @@ test('translates real Arknights marketplace terminology without Cyrillic leftove
   assert.match(translated, /Selector/i);
   assert.doesNotMatch(translated, /\p{Script=Cyrillic}/u);
 });
+
+test('translates real PUBG Mobile terminology without losing important attributes', () => {
+  const translated = translateGameTitle(
+    'pubg-mobile',
+    'Аренда, 56 уровень коллекции, X-костюм, ранг Платина, 30 мифик скинов, гарантия',
+  );
+  assert.match(translated, /rental/i);
+  assert.match(translated, /Collection Level/i);
+  assert.match(translated, /X-Suit/i);
+  assert.match(translated, /Platinum/i);
+  assert.match(translated, /Mythic skins/i);
+  assert.match(translated, /guarantee/i);
+  assert.doesNotMatch(translated, /\p{Script=Cyrillic}/u);
+});
+
+test('translates real Car Parking Marketplace terminology', () => {
+  const translated = translateGameTitle(
+    'car-parking-multiplayer',
+    'Эксклюзив, 195 машин, 190 винилов, весь донат, все дома, фул магазин куплен',
+  );
+  assert.match(translated, /Exclusive/i);
+  assert.match(translated, /Cars/i);
+  assert.match(translated, /Vinyls/i);
+  assert.match(translated, /all premium content/i);
+  assert.match(translated, /all houses/i);
+  assert.match(translated, /full shop unlocked/i);
+  assert.doesNotMatch(translated, /\p{Script=Cyrillic}/u);
+});
+
+test('translates real Endfield terminology', () => {
+  const translated = translateGameTitle(
+    'arknights-endfield',
+    'Европа, 108000 Ороберила, 105 стандартных и 18 ивентовых круток, Лиино, селектор',
+  );
+  assert.match(translated, /Europe/i);
+  assert.match(translated, /Orundum/i);
+  assert.match(translated, /standard Pulls/i);
+  assert.match(translated, /event Pulls/i);
+  assert.match(translated, /Liino/i);
+  assert.match(translated, /Selector/i);
+  assert.doesNotMatch(translated, /\p{Script=Cyrillic}/u);
+});
+
+test('translates real Standoff 2 terminology', () => {
+  const translated = translateGameTitle(
+    'standoff-2',
+    'Олд акк, 450 часов, трипл элита, нож, куча медалей, прикрепленные фото',
+  );
+  assert.match(translated, /veteran account/i);
+  assert.match(translated, /hours/i);
+  assert.match(translated, /Triple Elite/i);
+  assert.match(translated, /Knives/i);
+  assert.match(translated, /many Medals/i);
+  assert.match(translated, /attached screenshots/i);
+  assert.doesNotMatch(translated, /\p{Script=Cyrillic}/u);
+});

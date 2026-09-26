@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LogOut, Save, Trash2 } from 'lucide-react';
+import { KeyRound, LogOut, Save, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { Badge } from '@/components/ui/Badge';
@@ -30,6 +30,8 @@ export function SettingsPage() {
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
 
   const refreshIntegrations = () =>
@@ -76,6 +78,28 @@ export function SettingsPage() {
     }
   };
 
+  const changePassword = async () => {
+    setSaving('password');
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      toast.push({
+        title: 'Пароль изменён',
+        description: 'Остальные активные сессии завершены.',
+        tone: 'success',
+      });
+    } catch (error) {
+      toast.push({
+        title: 'Не удалось изменить пароль',
+        description: error instanceof Error ? error.message : undefined,
+        tone: 'error',
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -83,7 +107,7 @@ export function SettingsPage() {
         subtitle="Конфигурация игр, источников, площадок продажи и модели оценки"
       />
 
-      <div className="grid grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
         <div className="space-y-4">
           <Panel>
             <PanelHeader
@@ -104,6 +128,43 @@ export function SettingsPage() {
 
           <Panel>
             <PanelHeader
+              title="Безопасность"
+              subtitle="Смена пароля завершает остальные активные сессии"
+            />
+            <div className="space-y-3 px-4 py-4">
+              <label className="block space-y-1">
+                <FieldLabel>Текущий пароль</FieldLabel>
+                <TextInput
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  autoComplete="current-password"
+                />
+              </label>
+              <label className="block space-y-1">
+                <FieldLabel>Новый пароль</FieldLabel>
+                <TextInput
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  autoComplete="new-password"
+                  minLength={10}
+                />
+                <span className="block text-[11px] text-ink-4">Минимум 10 символов</span>
+              </label>
+              <Button
+                size="sm"
+                icon={KeyRound}
+                disabled={!currentPassword || newPassword.length < 10 || saving !== null}
+                onClick={() => void changePassword()}
+              >
+                Изменить пароль
+              </Button>
+            </div>
+          </Panel>
+
+          <Panel>
+            <PanelHeader
               title="Интеграции профиля"
               subtitle="Ключи зашифрованы на сервере и принадлежат только этому профилю"
             />
@@ -118,7 +179,7 @@ export function SettingsPage() {
                     {integrations?.eldorado.configured ? 'Подключено' : 'Не подключено'}
                   </Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <label className="space-y-1">
                     <FieldLabel>Client ID</FieldLabel>
                     <TextInput

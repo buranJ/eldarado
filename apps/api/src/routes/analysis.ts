@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/db.js';
-import { analyse } from '../analysis/run.js';
+import { analyse, type AnalyseReport } from '../analysis/run.js';
 import { readCredentials } from '../lib/credentials.js';
 
-let running: Promise<unknown> | null = null;
+let running: Promise<AnalyseReport> | null = null;
 
 export const registerAnalysisRoutes = (app: FastifyInstance): void => {
   app.get('/api/analysis/status', async (request) => {
@@ -57,7 +57,9 @@ export const registerAnalysisRoutes = (app: FastifyInstance): void => {
     });
 
     try {
-      return await running;
+      const report = await running;
+      if (report.analysed === 0 && report.failed > 0) reply.code(502);
+      return report;
     } catch (error) {
       return reply
         .code(502)

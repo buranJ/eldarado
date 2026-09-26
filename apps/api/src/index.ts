@@ -1,5 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { env } from './lib/env.js';
 import { prisma } from './lib/db.js';
 import { registerListingRoutes } from './routes/listings.js';
@@ -18,9 +20,29 @@ import { startCollectionWorker } from './pipeline/sync-runner.js';
 import { healthReport } from './lib/health.js';
 import { reportOperationalError } from './lib/error-monitor.js';
 
-const app = Fastify({ logger: { transport: { target: 'pino-pretty' } } });
+const app = Fastify({
+  logger: { transport: { target: 'pino-pretty' } },
+  trustProxy: env.production,
+  bodyLimit: 16 * 1024 * 1024,
+});
 
 await app.register(cors, { origin: env.appOrigin, credentials: true });
+await app.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+    },
+  },
+});
+await app.register(rateLimit, {
+  global: false,
+  max: 100,
+  timeWindow: '1 minute',
+});
 
 app.decorateRequest('user', null);
 app.addHook('onRequest', async (request, reply) => {

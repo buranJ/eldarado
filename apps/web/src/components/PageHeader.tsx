@@ -15,13 +15,13 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('flex items-start justify-between gap-6', className)}>
+    <div className={cn('flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-start sm:gap-6', className)}>
       <div className="min-w-0">
         <h1 className="text-[19px] font-semibold tracking-[-0.02em] text-ink">{title}</h1>
         {subtitle ? <p className="mt-1 text-[13px] text-ink-2">{subtitle}</p> : null}
         {meta ? <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">{meta}</div> : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex min-w-0 shrink-0 items-center gap-2 overflow-x-auto">{actions}</div> : null}
     </div>
   );
 }

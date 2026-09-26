@@ -8,7 +8,10 @@ import { translateClashRoyaleTitle } from './clash-royale.js';
 const PUBG_RULES: readonly TranslationRule[] = [
   [/пабг\s*(?:мобайл)?/giu, 'PUBG Mobile'],
   [/уровень\s+коллекц(?:ии|ия)/giu, 'Collection Level'],
-  [/мифик(?:и|ов|а)|мифическ(?:ий|их|ие)\s+скин(?:ы|ов)?/giu, 'Mythic skins'],
+  [
+    /мифик(?:и|ов|а)?(?:\s+скин(?:ы|ов|а)?)?|мифическ(?:ий|их|ие)\s+скин(?:ы|ов)?/giu,
+    'Mythic skins',
+  ],
   [/ас\s*мастер/giu, 'Ace Master'],
   [/(?<!\p{L})ас(?!\p{L})/giu, 'Ace'],
   [/прокач(?:иваем|уем)(?:ое|ые|ых)\s+(?:оружи(?:е|я)|м416)/giu, 'upgradable M416'],
@@ -35,6 +38,14 @@ const PUBG_RULES: readonly TranslationRule[] = [
   [/алмаз(?:а|ы)?/giu, 'Diamond'],
   [/оружи(?:е|я)/giu, 'weapons'],
   [/скин(?:ы|ов|а)/giu, 'skins'],
+  [/аренд(?:а|ы|у)/giu, 'rental'],
+  [/легендар(?:ок|ки|ный|ных)/giu, 'Legendary items'],
+  [/платин(?:а|ы)/giu, 'Platinum'],
+  [/рюкзак/giu, 'Backpack'],
+  [/маск(?:а|и)/giu, 'Mask'],
+  [/[xх]-?костюм/giu, 'X-Suit'],
+  [/стар(?:ых|ые)\s+и\s+редк(?:их|ие)/giu, 'veteran rare'],
+  [/недорог(?:о|ой)/giu, 'low price'],
 ];
 
 const CAR_PARKING_RULES: readonly TranslationRule[] = [
@@ -60,11 +71,25 @@ const CAR_PARKING_RULES: readonly TranslationRule[] = [
   [/мигалк(?:и|а)/giu, 'Police Lights'],
   [/дым/giu, 'Smoke'],
   [/фар(?:ы|а)/giu, 'Headlights'],
+  [/эксклюзив(?:ный|а)?/giu, 'Exclusive'],
+  [/все\s+дом(?:а|ы)/giu, 'all houses'],
+  [/фул\s+магазин\s+куплен/giu, 'full shop unlocked'],
+  [/одежд(?:а|ы)/giu, 'clothes'],
+  [/гонщик/giu, 'Rider'],
+  [/призрачн(?:ый|ого)/giu, 'Ghost'],
+  [/триколор/giu, 'Tricolor'],
+  [/федераци(?:я|и)/giu, 'Federation'],
 ];
 
 const ENDFIELD_RULES: readonly TranslationRule[] = [
   [/аркнайтс?\s*(?:эндфилд)?/giu, 'Arknights: Endfield'],
-  [/крутк(?:и|ок)|призыв(?:ы|ов)/giu, 'Pulls'],
+  [
+    /(\d+)\s+стандартн(?:ых|ые)\s+и\s+(\d+)\s+ивентов(?:ых|ые)\s+крут(?:ки|ок)/giu,
+    '$1 standard Pulls and $2 event Pulls',
+  ],
+  [/стандартн(?:ых|ые)\s+крут(?:ки|ок)/giu, 'standard Pulls'],
+  [/ивентов(?:ых|ые)\s+крут(?:ки|ок)/giu, 'event Pulls'],
+  [/крут(?:ки|ок)|призыв(?:ы|ов)/giu, 'Pulls'],
   [/орундум(?:а|ы)?|ороберил(?:а|ы)?/giu, 'Orundum'],
   [/оператор(?:ы|ов|а)?/giu, 'Operators'],
   [/персонаж(?:и|ей)|перс(?:ы|ами)/giu, 'Operators'],
@@ -96,6 +121,17 @@ const ENDFIELD_RULES: readonly TranslationRule[] = [
   [/гилберт(?:а|ы)/giu, 'Gilberta'],
   [/ми\s+фу/giu, 'Mi Fu'],
   [/дицзян/giu, 'Dijiang'],
+  [/европ(?:а|ы)/giu, 'Europe'],
+  [/америк(?:а|и)/giu, 'Americas'],
+  [/саппорт(?:а|ы|ов)?/giu, 'supports'],
+  [/зв[её]здочн(?:ого|ый)\s+Operators?/giu, '6-star Operator'],
+  [/разрешени(?:е|я)\s+на\s+на[её]м/giu, 'recruitment permit'],
+  [/селектор/giu, 'Selector'],
+  [/билет/giu, 'Ticket'],
+  [/нович(?:ок|ка)/giu, 'Beginner'],
+  [/лиино/giu, 'Liino'],
+  [/дальновидност(?:ь|и)/giu, 'Foresight'],
+  [/премудрост(?:ь|и)/giu, 'Wisdom'],
 ];
 
 const STANDOFF_RULES: readonly TranslationRule[] = [
@@ -123,6 +159,10 @@ const STANDOFF_RULES: readonly TranslationRule[] = [
   [/ранг/giu, 'Rank'],
   [/айди|ид/giu, 'ID'],
   [/без\s+использования\s+по|без\s+по/giu, 'no cheats'],
+  [/элит(?:а|ы)/giu, 'Elite'],
+  [/куч(?:а|и)\s+Medals/giu, 'many Medals'],
+  [/сочн(?:ый|ого)/giu, 'high-value'],
+  [/прикрепленн(?:ые|ых)\s+screenshots/giu, 'attached screenshots'],
 ];
 
 const JJK_PHANTOM_PARADE_RULES: readonly TranslationRule[] = [

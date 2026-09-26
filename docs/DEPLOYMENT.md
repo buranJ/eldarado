@@ -63,6 +63,14 @@ cd "$(find /opt/gamestock-backups -mindepth 1 -maxdepth 1 -type d | sort | tail 
 sha256sum -c SHA256SUMS
 ```
 
+The repository also contains a non-destructive verification command which
+checks hashes, the PostgreSQL archive catalogue and the complete photo archive:
+
+```bash
+docker compose --env-file .env.production exec -T backup \
+  /scripts/verify-backup.sh /backups/BACKUP_NAME
+```
+
 Restore into an empty database and data directory:
 
 ```bash

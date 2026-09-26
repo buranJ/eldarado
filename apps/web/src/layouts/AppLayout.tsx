@@ -9,7 +9,7 @@ export function AppLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1680px] px-6 py-6">
+          <div className="mx-auto max-w-[1680px] px-3 py-4 md:px-6 md:py-6">
             <Outlet />
           </div>
         </main>

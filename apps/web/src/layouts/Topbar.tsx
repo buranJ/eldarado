@@ -92,11 +92,11 @@ export function Topbar() {
   };
 
   return (
-    <header className="flex h-[52px] shrink-0 items-center justify-between gap-6 border-b border-line bg-panel px-6">
+    <header className="flex h-[52px] shrink-0 items-center justify-between gap-2 border-b border-line bg-panel px-3 md:gap-6 md:px-6">
       <div className="flex items-center gap-3">
         <h1 className="text-[14px] font-semibold tracking-[-0.01em] text-ink">{title}</h1>
-        <span className="h-3.5 w-px bg-line-2" />
-        <span className="flex items-center gap-1.5 text-[12.5px] text-ink-2">
+        <span className="hidden h-3.5 w-px bg-line-2 sm:block" />
+        <span className="hidden items-center gap-1.5 text-[12.5px] text-ink-2 sm:flex">
           <span className="flex size-4 items-center justify-center rounded-sm border border-line-2 bg-panel-2 text-[8px] font-bold text-ink-3">
             {game.monogram}
           </span>
@@ -104,8 +104,8 @@ export function Topbar() {
         </span>
       </div>
 
-      <div className="flex items-center gap-5">
-        <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2 xl:gap-5">
+        <div className="hidden items-center gap-2 lg:flex">
           <span
             className={cn(
               'size-1.5 rounded-full',
@@ -129,9 +129,9 @@ export function Topbar() {
           </span>
         </div>
 
-        <span className="h-3.5 w-px bg-line-2" />
+        <span className="hidden h-3.5 w-px bg-line-2 lg:block" />
 
-        <div className="flex items-center gap-4 text-[12px]">
+        <div className="hidden items-center gap-4 text-[12px] xl:flex">
           <span className="text-ink-3">
             Последний сбор:{' '}
             <span className="text-ink-2">

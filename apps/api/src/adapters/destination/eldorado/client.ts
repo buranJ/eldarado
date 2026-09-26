@@ -113,6 +113,11 @@ export class EldoradoClient {
     return this.credentials !== null;
   }
 
+  /** Validates credentials without creating, changing or deleting an offer. */
+  async verifyCredentials(): Promise<void> {
+    await this.accessToken();
+  }
+
   private async accessToken(): Promise<string> {
     if (!this.configured) {
       throw new EldoradoApiError(

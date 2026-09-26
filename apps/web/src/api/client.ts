@@ -212,6 +212,11 @@ export const api = {
       body: JSON.stringify({ displayName, email, password }),
     }),
   logout: () => request<{ ok: true }>('/auth/logout', { method: 'POST', body: '{}' }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ ok: true }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
   integrations: () => request<IntegrationStatus>('/profile/integrations'),
   saveEldoradoCredentials: (clientId: string, clientSecret: string) =>
     request<{ configured: true; clientIdMask: string }>('/profile/integrations/eldorado', {
