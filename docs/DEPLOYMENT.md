@@ -54,7 +54,9 @@ The `backup` service runs once immediately after startup and then every
 - `storage.tar.gz` — collected account images and durable settings;
 - `SHA256SUMS` — integrity hashes.
 
-Backups older than `BACKUP_RETENTION_DAYS` are removed. Verify the latest backup:
+Backups older than `BACKUP_RETENTION_DAYS` are removed. The default keeps the
+current and previous daily backup because account photos make each archive large.
+Verify the latest backup:
 
 ```bash
 cd "$(find /opt/gamestock-backups -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"

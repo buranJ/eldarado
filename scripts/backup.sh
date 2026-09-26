@@ -24,7 +24,7 @@ pg_dump \
   --file="$temporary/database.dump"
 
 tar -C /source-storage -czf "$temporary/storage.tar.gz" .
-sha256sum "$temporary/database.dump" "$temporary/storage.tar.gz" > "$temporary/SHA256SUMS"
+(cd "$temporary" && sha256sum database.dump storage.tar.gz > SHA256SUMS)
 mv "$temporary" "$target"
 trap - EXIT INT TERM
 
