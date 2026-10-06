@@ -1,6 +1,6 @@
-import { stat } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { prisma } from '../lib/db.js';
-import { deleteSourceImages, sourceImagePath } from '../lib/source-images.js';
+import { deleteSourceImages, SOURCE_IMAGE_DIR, sourceImagePath } from '../lib/source-images.js';
 
 type Candidate = Awaited<ReturnType<typeof loadCandidates>>[number];
 
@@ -32,6 +32,26 @@ const reasonFor = (listing: Candidate): string | null => {
   return null;
 };
 
+const orphanedPhotos = async (): Promise<string[]> => {
+  const [files, linkedImages] = await Promise.all([
+    readdir(SOURCE_IMAGE_DIR),
+    prisma.listingImage.findMany({ select: { fileName: true } }),
+  ]);
+  const linked = new Set(linkedImages.map((image) => image.fileName));
+  return files.filter((fileName) =>
+    /^\d+-[1-4]\.(?:jpg|png|heic|heif)$/i.test(fileName) && !linked.has(fileName));
+};
+
+const fileBytes = async (fileNames: string[]): Promise<number> =>
+  (await Promise.all(fileNames.map(async (fileName) => {
+    try {
+      return (await stat(sourceImagePath(fileName))).size;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
+      throw error;
+    }
+  }))).reduce((total, size) => total + size, 0);
+
 const main = async (): Promise<void> => {
   const apply = process.argv.includes('--apply');
   if (apply && (await prisma.collectionJob.count({ where: { status: { in: ['queued', 'running'] } } })) > 0) {
@@ -46,22 +66,17 @@ const main = async (): Promise<void> => {
   }, {});
   const fileNames = [...new Set(candidates.flatMap((listing) =>
     listing.images.map((image) => image.fileName)))];
-  const bytes = (await Promise.all(fileNames.map(async (fileName) => {
-    try {
-      return (await stat(sourceImagePath(fileName))).size;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
-      throw error;
-    }
-  }))).reduce((total, size) => total + size, 0);
+  const [bytes, orphanNames] = await Promise.all([fileBytes(fileNames), orphanedPhotos()]);
+  const orphanBytes = await fileBytes(orphanNames);
 
   console.log(`Режим: ${apply ? 'удаление' : 'проверка без удаления'}`);
   console.table(reasons);
   console.log(`Объявлений: ${candidates.length}; фото: ${fileNames.length}; размер фото: ${(bytes / 1048576).toFixed(1)} МиБ`);
-  if (!apply || candidates.length === 0) return;
+  console.log(`Осиротевших фото: ${orphanNames.length}; размер: ${(orphanBytes / 1048576).toFixed(1)} МиБ`);
+  if (!apply) return;
 
   const selectedIds = candidates.map((listing) => listing.id);
-  const deleted = await prisma.$transaction(async (tx) => {
+  const deleted = candidates.length > 0 ? await prisma.$transaction(async (tx) => {
     const current = await tx.listing.findMany({
       where: {
         id: { in: selectedIds },
@@ -89,7 +104,7 @@ const main = async (): Promise<void> => {
       throw new Error('Состав кандидатов изменился во время очистки; транзакция отменена');
     }
     return eligible;
-  });
+  }) : [];
 
   const deletedFileNames = [...new Set(deleted.flatMap((listing) =>
     listing.images.map((image) => image.fileName)))];
@@ -103,6 +118,12 @@ const main = async (): Promise<void> => {
     await deleteSourceImages(unsharedFiles.slice(index, index + 25));
   }
   console.log(`Удалено объявлений: ${deleted.length}; файлов фото: ${unsharedFiles.length}`);
+
+  const currentOrphans = await orphanedPhotos();
+  for (let index = 0; index < currentOrphans.length; index += 25) {
+    await deleteSourceImages(currentOrphans.slice(index, index + 25));
+  }
+  console.log(`Удалено осиротевших фото: ${currentOrphans.length}`);
 };
 
 main()
