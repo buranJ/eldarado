@@ -42,6 +42,14 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   coins: 'Монеты',
   playtimeHours: 'Часы игры',
   gold: 'Gold',
+  townHallLevel: 'Уровень ратуши',
+  builderHallLevel: 'Ратуша строителя',
+  champions: 'Чемпионы',
+  heroes: 'Герои',
+  skins: 'Облики',
+  winRate: 'Победы, %',
+  server: 'Сервер',
+  tickets: 'Тикеты',
 };
 
 export function AccountDrawer({

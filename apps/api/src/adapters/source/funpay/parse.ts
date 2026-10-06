@@ -103,6 +103,22 @@ const stripGameSuffix = (
     const escapedRank = attrs.rank.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return rawTitle.replace(new RegExp(`,\\s*${escapedRank}\\s*$`, 'iu'), '').trim();
   }
+  if (gameId === 'honkai-impact-3rd' && attrs.level) {
+    return rawTitle.replace(new RegExp(`,\\s*${attrs.level}\\s+level\\s*$`, 'iu'), '').trim();
+  }
+  if (['rust', 'league-of-legends', 'mobile-legends'].includes(gameId ?? '') &&
+      /^(?:продажа|sale)$/iu.test(attrs.type ?? '')) {
+    return rawTitle.replace(/,\s*(?:Продажа|Sale)(?:,\s*.*)?$/iu, '').trim();
+  }
+  if (gameId === 'clash-of-clans' && attrs.level) {
+    const suffix = new RegExp(
+      `,\\s*${attrs.level}\\s+TH\\s+Родной\\s+Деревни` +
+        (attrs.level2 ? `(?:,\\s*${attrs.level2}\\s+TH\\s+Строителя)?` : '') +
+        '\\s*$',
+      'iu',
+    );
+    return rawTitle.replace(suffix, '').trim();
+  }
   return rawTitle.trim();
 };
 
@@ -176,6 +192,40 @@ const gameDataFor = (
         accountLevel: titleNumber(title, 'уров(?:ень|ня)|лвл|lvl|level'),
         platform: attrs.server ?? null,
       };
+    case 'honkai-impact-3rd':
+      return {
+        accountLevel: toInt(attrs.level),
+        tickets: titleNumber(title, 'тикет(?:ов|а|ы)?|билет(?:ов|а|ы)?|купон(?:ов|а|ы)?|tickets?'),
+        server: attrs.server ?? null,
+      };
+    case 'rust':
+      return {
+        offerType: attrs.type ?? null,
+        server: attrs.server ?? null,
+      };
+    case 'league-of-legends':
+      return {
+        accountLevel: toInt(attrs.level),
+        champions: toInt(attrs.hero),
+        skins: toInt(attrs.skin),
+        rank: attrs.rank ?? null,
+        offerType: attrs.type ?? null,
+        server: attrs.server ?? null,
+      };
+    case 'mobile-legends':
+      return {
+        accountLevel: toInt(attrs.lvl),
+        heroes: toInt(attrs.hero),
+        skins: toInt(attrs.skin),
+        winRate: toInt(attrs.winrate),
+        rank: attrs.rank ?? null,
+        offerType: attrs.type ?? null,
+      };
+    case 'clash-of-clans':
+      return {
+        townHallLevel: toInt(attrs.level),
+        builderHallLevel: toInt(attrs.level2),
+      };
     default:
       return {
         arena: toInt(attrs.arena),
@@ -217,7 +267,18 @@ export const parseCategory = (html: string, gameId?: string): RawOffer[] => {
       levela: node.attr('data-f-levela'),
       levele: node.attr('data-f-levele'),
       server: node.attr('data-f-server') ?? node.attr('data-server'),
+      level2: node.attr('data-f-level2'),
+      lvl: node.attr('data-f-lvl'),
+      hero: node.attr('data-f-hero'),
+      skin: node.attr('data-f-skin'),
+      winrate: node.attr('data-f-winrate'),
     };
+
+    if (
+      ['rust', 'league-of-legends', 'mobile-legends'].includes(gameId ?? '') &&
+      attrs.type &&
+      !/^(?:продажа|sale)$/iu.test(attrs.type)
+    ) return;
 
     const rawTitle = node.find('.tc-desc-text').first().text().trim();
     const priceText = node.find('.tc-price').first().text().trim();

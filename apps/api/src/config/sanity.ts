@@ -29,6 +29,10 @@ export const SANITY: Record<string, Record<string, SanityRange>> = {
     accountLevel: { min: 1, max: 1_000, label: 'уровень аккаунта' },
     playtimeHours: { min: 0, max: 50_000, label: 'часы игры' },
   },
+  'clash-of-clans': {
+    townHallLevel: { min: 1, max: 20, label: 'уровень ратуши' },
+    builderHallLevel: { min: 1, max: 12, label: 'уровень ратуши строителя' },
+  },
 };
 
 export interface SanityResult {

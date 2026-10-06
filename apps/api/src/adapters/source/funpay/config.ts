@@ -8,6 +8,11 @@ export const FUNPAY_CATEGORIES: Record<string, { lotId: number; label: string }>
   'car-parking-multiplayer': { lotId: 1534, label: 'Car Parking Multiplayer — аккаунты' },
   'arknights-endfield': { lotId: 3939, label: 'Arknights: Endfield — аккаунты' },
   'standoff-2': { lotId: 454, label: 'Standoff 2 — аккаунты' },
+  'honkai-impact-3rd': { lotId: 1082, label: 'Honkai Impact 3rd — аккаунты' },
+  rust: { lotId: 250, label: 'Rust — аккаунты' },
+  'league-of-legends': { lotId: 85, label: 'League of Legends — аккаунты' },
+  'mobile-legends': { lotId: 366, label: 'Mobile Legends — аккаунты' },
+  'clash-of-clans': { lotId: 147, label: 'Clash of Clans — аккаунты' },
   // These ids intentionally match the existing Eldorado-backed workspace ids.
   // Keeping them stable preserves imported listings and the selected-game value
   // already stored in users' browsers.

@@ -159,6 +159,10 @@ docs/
 - Jujutsu Kaisen Phantom Parade;
 - Arknights.
 
+Дополнительно настроены сбор и первичная фильтрация аккаунтов Honkai Impact 3rd,
+Rust, League of Legends, Mobile Legends и Clash of Clans. Для этих пяти игр
+публикация на Eldorado пока не настроена.
+
 ## Эксплуатация
 
 Контейнер `backup` ежедневно сохраняет дамп PostgreSQL и архив фотографий с

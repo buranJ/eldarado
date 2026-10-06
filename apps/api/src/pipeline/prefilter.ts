@@ -76,6 +76,15 @@ export const prefilter = (
     }
   }
 
+  const townHallLevel = gameData.townHallLevel as number | null;
+  if (config.minTownHallLevel !== undefined) {
+    if (townHallLevel === null || townHallLevel === undefined) {
+      reasons.push('не указан уровень ратуши');
+    } else if (townHallLevel < config.minTownHallLevel) {
+      reasons.push(`ратуша ${townHallLevel} < ${config.minTownHallLevel}`);
+    }
+  }
+
   if (config.requireAutoDelivery && !offer.autoDelivery) {
     reasons.push('нет автовыдачи');
   }

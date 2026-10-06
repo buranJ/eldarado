@@ -25,10 +25,15 @@ import type { InventoryItemDto } from '@/api/client';
 import { formatMoney, money } from '@/utils/money';
 import { formatDateTime } from '@/utils/date';
 import { formatNumber } from '@/utils/format';
+import { getGame } from '@/config/games';
+
 type InventoryTab = 'new' | 'published' | 'sold';
 
-const canPublish = (item: InventoryItemDto): boolean =>
+const isNew = (item: InventoryItemDto): boolean =>
   ['purchased', 'ready_to_list', 'preparing'].includes(item.status);
+
+const canPublish = (item: InventoryItemDto): boolean =>
+  isNew(item) && getGame(item.gameId).eldoradoGameId !== null;
 
 export function InventoryPage() {
   const state = useAppState();
@@ -46,7 +51,7 @@ export function InventoryPage() {
   const allItems = useMemo(() => inventory.data?.items ?? [], [inventory.data]);
   const counts = useMemo(
     () => ({
-      new: allItems.filter((item) => canPublish(item) || item.status === 'reserved').length,
+      new: allItems.filter((item) => isNew(item) || item.status === 'reserved').length,
       published: allItems.filter((item) => item.status === 'listed').length,
       sold: allItems.filter((item) => item.status === 'sold').length,
     }),
@@ -63,7 +68,7 @@ export function InventoryPage() {
     return allItems.filter((item) => {
       const inTab =
         tab === 'new'
-          ? canPublish(item) || item.status === 'reserved'
+          ? isNew(item) || item.status === 'reserved'
           : tab === 'published'
             ? item.status === 'listed'
             : item.status === 'sold';

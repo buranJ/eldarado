@@ -43,6 +43,7 @@ export interface PrefilterConfig {
   minTrophies?: number;
   minCards?: number;
   minAccountLevel?: number;
+  minTownHallLevel?: number;
   requireAutoDelivery: boolean;
 }
 
