@@ -95,3 +95,62 @@ test('collects only still-unknown Cyrillic terms for dictionary maintenance', ()
   assert.deepEqual(terms.sort(), ['бронемобиль', 'новый', 'термин']);
   assert.doesNotMatch(terms.join(' '), /аренда|костюм/u);
 });
+
+test('translates new-game titles using the actual FunPay terminology', () => {
+  const cases: Array<{ gameId: string; title: string; expected: RegExp[] }> = [
+    {
+      gameId: 'honkai-impact-3rd',
+      title: 'Мейн аккаунт. Метовые валькирии, 22+ 6☆ Оружий, 13 тикетов',
+      expected: [/main account/i, /Valkyries/i, /Weapons/i, /Tickets/i],
+    },
+    {
+      gameId: 'rust',
+      title: 'ПРОДАМ АКК В РАСТ 27 СКИНОВ 1К ЧАСОВ МНОГО ДРУГИХ ПЛАТНЫХ ИГР',
+      expected: [/Rust/i, /skins/i, /hours/i, /paid games/i],
+    },
+    {
+      gameId: 'league-of-legends',
+      title: 'Нет ранга | 111 чемпионов | 26 скинов | 113 лвл',
+      expected: [/unranked/i, /champions/i, /skins/i, /LVL/i],
+    },
+    {
+      gameId: 'mobile-legends',
+      title: 'Наруто Джулиан, Лега Алукард, Стар Лесли, Эпик Фрейя',
+      expected: [/Naruto/i, /Julian/i, /Alucard/i, /Starlight Lesley/i, /Epic Freya/i],
+    },
+    {
+      gameId: 'clash-of-clans',
+      title: 'Тх 10 почти фул, герои 38/38/10, 5 строителей, 400 гемов',
+      expected: [/TH 10/i, /nearly maxed/i, /heroes/i, /builders/i, /Gems/i],
+    },
+  ];
+
+  for (const { gameId, title, expected } of cases) {
+    const translated = translateGameTitle(gameId, title);
+    for (const fragment of expected) assert.match(translated, fragment, gameId);
+    assert.doesNotMatch(translated, /\p{Script=Cyrillic}/u, gameId);
+  }
+});
+
+test('preserves quantities and named assets in extended new-game titles', () => {
+  const rust = translateGameTitle(
+    'rust',
+    'ПРОДАМ АКК В РАСТ 27 СКИНОВ 1К ЧАСОВ МНОГО ДРУГИХ ПЛАТНЫХ ИГР',
+  );
+  assert.match(rust, /1K hours/i);
+  assert.match(rust, /many other paid games/i);
+
+  const league = translateGameTitle(
+    'league-of-legends',
+    '142скина+160чемпион 15к СЭ Аркейн Победоносные Чемпионат мира Треш',
+  );
+  assert.match(league, /15K Blue Essence/i);
+  assert.match(league, /World Championship Thresh/i);
+
+  const mobile = translateGameTitle(
+    'mobile-legends',
+    'Наруто Джулиан Итачи Инь Лега Алукард Лаки Алиса Стар Лесли',
+  );
+  assert.match(mobile, /Lucky Alice/i);
+  assert.match(mobile, /Starlight Lesley/i);
+});

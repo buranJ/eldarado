@@ -99,6 +99,11 @@ const INTERNAL_GAME_IDS: Record<string, string> = {
   '358': 'arknights-endfield',
   '179': 'eldorado-179',
   '166': 'eldorado-166',
+  '154': 'honkai-impact-3rd',
+  '37': 'rust',
+  '17': 'league-of-legends',
+  '55': 'mobile-legends',
+  '18': 'clash-of-clans',
 };
 
 const GAME_LABELS: Record<string, string> = {
@@ -109,6 +114,11 @@ const GAME_LABELS: Record<string, string> = {
   'standoff-2': 'Standoff 2',
   'eldorado-179': 'Jujutsu Kaisen Phantom Parade',
   'eldorado-166': 'Arknights',
+  'honkai-impact-3rd': 'Honkai Impact 3rd',
+  rust: 'Rust',
+  'league-of-legends': 'League of Legends',
+  'mobile-legends': 'Mobile Legends',
+  'clash-of-clans': 'Clash of Clans',
 };
 
 const internalGameId = (eldoradoGameId: string): string =>

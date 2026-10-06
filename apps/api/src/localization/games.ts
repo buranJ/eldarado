@@ -221,6 +221,168 @@ const ARKNIGHTS_RULES: readonly TranslationRule[] = [
   [/персонаж(?:и|ей|а)?/giu, 'Operators'],
 ];
 
+const HONKAI_IMPACT_RULES: readonly TranslationRule[] = [
+  [/хонкай\s*(?:импакт)?\s*3(?:рд)?/giu, 'Honkai Impact 3rd'],
+  [/валькир(?:ии|ий|ия)/giu, 'Valkyries'],
+  [/тикет(?:ы|ов|а)?|билет(?:ы|ов|а)?|купон(?:ы|ов|а)?/giu, 'Tickets'],
+  [/кристалл(?:ы|ов|а)?/giu, 'Crystals'],
+  [/неролл/giu, 'non-reroll'],
+  [/ивент(?:ы|ов|а)?/giu, 'events'],
+  [/метов(?:ые|ый|ая)/giu, 'meta'],
+  [/оружи(?:е|я|й)/giu, 'Weapons'],
+  [/фулл?\s+перс(?:ы|ов|а)?/giu, 'fully geared characters'],
+  [/персонаж(?:и|ей)|перс(?:ы|ов|а)?/giu, 'characters'],
+  [/мейн\s+(?:аккаунт|акк)/giu, 'main account'],
+  [/броня/giu, 'Bronya'],
+  [/м[эе]й/giu, 'Mei'],
+  [/терез(?:а|ы)/giu, 'Theresa'],
+  [/сильвервинг/giu, 'Silverwing'],
+  [/геншин/giu, 'Genshin Impact'],
+  [/хср/giu, 'Honkai: Star Rail'],
+  [/закрыт(?:ый|ого)\s+контент/giu, 'completed content'],
+  [/ретурн/giu, 'returning account'],
+  [/(?<!\p{L})жир(?!\p{L})/giu, 'high-value'],
+  [/год(?:а|ов)?/giu, 'year'],
+];
+
+const RUST_RULES: readonly TranslationRule[] = [
+  [/раст/giu, 'Rust'],
+  [/длс|длц/giu, 'DLC'],
+  [/скин(?:ы|ов|а)?/giu, 'skins'],
+  [/час(?:ов|а)?/giu, 'hours'],
+  [/без\s+VAC\s+бан(?:ов|а)?/giu, 'no VAC bans'],
+  [/бан(?:ов|а)?/giu, 'bans'],
+  [/пол(?:ь|ьш)ша|польш(?:а|е|и)/giu, 'Poland'],
+  [/стран(?:а|ы)/giu, 'country'],
+  [/игр(?:ы|а)?/giu, 'games'],
+  [/платн(?:ых|ые)/giu, 'paid'],
+  [/много/giu, 'many'],
+  [/друг(?:их|ие)/giu, 'other'],
+  [/полная\s+смена\s+данных/giu, 'full credential change'],
+  [/пере\s*привязк(?:а|ой|и)/giu, 'rebind available'],
+  [/навсегда/giu, 'permanent'],
+  [/нов(?:ый|ого|ая)/giu, 'new'],
+  [/только\s+ваш/giu, 'exclusive access'],
+  [/прайм/giu, 'Prime'],
+  [/в\s+кс/giu, 'in CS2'],
+  [/продам/giu, 'for sale'],
+];
+
+const LEAGUE_OF_LEGENDS_RULES: readonly TranslationRule[] = [
+  [/прокачан\s+вручную/giu, 'hand-leveled'],
+  [/нет\s+ранга/giu, 'unranked'],
+  [/чемпионат\s+мира/giu, 'World Championship'],
+  [/чемпион(?:ов|ы|а)?/giu, 'champions'],
+  [/скин(?:ов|ы|а)?/giu, 'skins'],
+  [/ранг(?:а|и)?/giu, 'rank'],
+  [/победоносн(?:ые|ый|ая)/giu, 'Victorious'],
+  [/хекстек/giu, 'Hextech'],
+  [/аркейн/giu, 'Arcane'],
+  [/(?<!\p{L})с[эе](?!\p{L})/giu, 'Blue Essence'],
+  [/шако/giu, 'Shaco'],
+  [/фиор(?:а|ы)/giu, 'Fiora'],
+  [/эзреал(?:ь|я)/giu, 'Ezreal'],
+  [/поппи/giu, 'Poppy'],
+  [/леон(?:а|ы)/giu, 'Leona'],
+  [/акшан/giu, 'Akshan'],
+  [/твистед/giu, 'Twisted Fate'],
+  [/кеннен/giu, 'Kennen'],
+  [/рамбл/giu, 'Rumble'],
+  [/ари/giu, 'Ahri'],
+  [/виего/giu, 'Viego'],
+  [/шен/giu, 'Shen'],
+  [/треш/giu, 'Thresh'],
+  [/велик(?:ая|ий)\s+легенд(?:а|ы)/giu, 'Legendary'],
+  [/призрак/giu, 'Wraith'],
+  [/аккич/giu, 'account'],
+];
+
+const MOBILE_LEGENDS_RULES: readonly TranslationRule[] = [
+  [/миф(?:ический)?\s+бессмертн(?:ый|ого)/giu, 'Mythical Immortal'],
+  [/миф(?:ическая)?\s+слав(?:а|ы)/giu, 'Mythical Glory'],
+  [/грандмастер/giu, 'Grandmaster'],
+  [/мастер/giu, 'Master'],
+  [/мега/giu, 'Mega'],
+  [/лег(?:а|и|ендарн(?:ый|ые))?/giu, 'Legend'],
+  [/эпик/giu, 'Epic'],
+  [/коллектор|(?<!\p{L})кол(?!\p{L})/giu, 'Collector'],
+  [/стар\s+варс/giu, 'Star Wars'],
+  [/стар(?!\p{L})/giu, 'Starlight'],
+  [/лаки\s*бокс|лакибокс/giu, 'Lucky Box'],
+  [/лаки/giu, 'Lucky'],
+  [/аспи(?:рант)?/giu, 'Aspirants'],
+  [/зенит/giu, 'Zenith'],
+  [/коф/giu, 'KOF'],
+  [/скин(?:ов|ы|а)?/giu, 'skins'],
+  [/геро(?:и|ев|й)/giu, 'heroes'],
+  [/зв[её]зд/giu, 'stars'],
+  [/миров(?:ая|ой)/giu, 'world-ranked'],
+  [/скриншот(?:ы|ов)?/giu, 'screenshots'],
+  [/джулиан/giu, 'Julian'],
+  [/итачи/giu, 'Itachi'],
+  [/лесл(?:и|ей)/giu, 'Lesley'],
+  [/алукард/giu, 'Alucard'],
+  [/карин(?:а|ы)/giu, 'Karina'],
+  [/фре(?:й|и)я/giu, 'Freya'],
+  [/беатрис/giu, 'Beatrix'],
+  [/циклоп/giu, 'Cyclops'],
+  [/селен(?:а|ы)/giu, 'Selena'],
+  [/фанни/giu, 'Fanny'],
+  [/госсен/giu, 'Gusion'],
+  [/гус(?:ь|я)/giu, 'Gusion'],
+  [/ак(?:а|ай)/giu, 'Akai'],
+  [/инь/giu, 'Yin'],
+  [/алис(?:а|ы)/giu, 'Alice'],
+  [/ха[яй]/giu, 'Hayabusa'],
+  [/наташ(?:а|и)/giu, 'Natalia'],
+  [/в[эе]йл/giu, 'Vale'],
+  [/к[эе]рри/giu, 'Karrie'],
+  [/харли/giu, 'Harley'],
+  [/в[эе]ксен(?:а|ы)/giu, 'Vexana'],
+  [/клод/giu, 'Claude'],
+  [/чонг/giu, 'Yu Zhong'],
+  [/ангел(?:а|ы)/giu, 'Angela'],
+  [/бада(?:н|нг)/giu, 'Badang'],
+  [/неймар/giu, 'Neymar'],
+  [/кагур(?:а|ы)/giu, 'Kagura'],
+  [/алдос/giu, 'Aldous'],
+  [/кимми/giu, 'Kimmy'],
+  [/бруно/giu, 'Bruno'],
+  [/наруто/giu, 'Naruto'],
+  [/год(?:а|ов)?|лет/giu, 'years'],
+];
+
+const CLASH_OF_CLANS_RULES: readonly TranslationRule[] = [
+  [/тх|ратуш(?:а|и)/giu, 'TH'],
+  [/раш(?:еный|енный)?/giu, 'rushed'],
+  [/супер\s+макс/giu, 'fully maxed'],
+  [/почти\s+фулл?|практически\s+фулл?/giu, 'nearly maxed'],
+  [/фулл?|макс/giu, 'maxed'],
+  [/геро(?:и|ев|й)/giu, 'heroes'],
+  [/дс\s+строител(?:ь|я|ей|и)/giu, 'Builder Base'],
+  [/строител(?:ь|я|ей|и)/giu, 'builders'],
+  [/гем(?:ы|ов|а)?/giu, 'Gems'],
+  [/медал(?:и|ей|ь)/giu, 'medals'],
+  [/лвк/giu, 'CWL'],
+  [/эпическ(?:их|ие|ий)/giu, 'Epic'],
+  [/сноряг|снаряжени(?:й|я|е)|снаряг(?:а|и)?/giu, 'equipment'],
+  [/оформ(?:ы|а|ление)/giu, 'scenery'],
+  [/скин(?:ы|ов|а)?/giu, 'skins'],
+  [/волшебн(?:ые|ых)\s+предмет(?:ы|ов)/giu, 'Magic Items'],
+  [/предмет(?:ы|ов)/giu, 'items'],
+  [/пропуск(?:и|ов)?/giu, 'passes'],
+  [/повозк(?:а|и)/giu, 'Loot Cart'],
+  [/смена\s+(?:имени|ник(?:а|а))/giu, 'name change'],
+  [/бесплатн(?:ая|ый)/giu, 'free'],
+  [/выгодн(?:ое|о)/giu, 'good value'],
+  [/предложени(?:е|я)/giu, 'offer'],
+  [/немного/giu, 'slightly'],
+  [/мног(?:о|ие)/giu, 'many'],
+  [/аниме\s*ярость/giu, 'Anime Rage'],
+  [/дешево/giu, 'low price'],
+  [/раб(?:а|ы)/giu, 'builders'],
+];
+
 const translate = (source: string, rules: readonly TranslationRule[], fallback: string): string =>
   translateWithRules(source, [...rules, ...COMMON_ACCOUNT_RULES], fallback);
 
@@ -233,6 +395,11 @@ const rulesForGame = (gameId: string): readonly TranslationRule[] | null => {
     case 'standoff-2': return STANDOFF_RULES;
     case 'eldorado-179': return JJK_PHANTOM_PARADE_RULES;
     case 'eldorado-166': return ARKNIGHTS_RULES;
+    case 'honkai-impact-3rd': return HONKAI_IMPACT_RULES;
+    case 'rust': return RUST_RULES;
+    case 'league-of-legends': return LEAGUE_OF_LEGENDS_RULES;
+    case 'mobile-legends': return MOBILE_LEGENDS_RULES;
+    case 'clash-of-clans': return CLASH_OF_CLANS_RULES;
     default: return null;
   }
 };
@@ -258,6 +425,16 @@ export const translateGameTitle = (gameId: string, source: string): string => {
       return translate(source, JJK_PHANTOM_PARADE_RULES, 'JJK Phantom Parade account');
     case 'eldorado-166':
       return translate(source, ARKNIGHTS_RULES, 'Arknights account');
+    case 'honkai-impact-3rd':
+      return translate(source, HONKAI_IMPACT_RULES, 'Honkai Impact 3rd account');
+    case 'rust':
+      return translate(source, RUST_RULES, 'Rust account');
+    case 'league-of-legends':
+      return translate(source, LEAGUE_OF_LEGENDS_RULES, 'League of Legends account');
+    case 'mobile-legends':
+      return translate(source, MOBILE_LEGENDS_RULES, 'Mobile Legends account');
+    case 'clash-of-clans':
+      return translate(source, CLASH_OF_CLANS_RULES, 'Clash of Clans account');
     default:
       return source;
   }

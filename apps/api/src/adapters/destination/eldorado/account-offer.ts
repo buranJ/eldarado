@@ -19,6 +19,11 @@ export const ELDORADO_ACCOUNT_GAMES: Record<
   // Arknights requires a region. FunPay's category is Global, whose stable
   // Eldorado Trade Environment ID is 0.
   'eldorado-166': { gameId: '166', seoAlias: 'arknights-accounts', tradeEnvironmentId: '0' },
+  'honkai-impact-3rd': { gameId: '154', seoAlias: 'honkai-impact-3rd-accounts' },
+  rust: { gameId: '37', seoAlias: 'rust-accounts' },
+  'league-of-legends': { gameId: '17', seoAlias: 'league-of-legends-accounts-for-sale' },
+  'mobile-legends': { gameId: '55', seoAlias: 'mobile-legends-accounts' },
+  'clash-of-clans': { gameId: '18', seoAlias: 'clash-of-clans-account-for-sale' },
 };
 
 export interface EldoradoOfferImage {

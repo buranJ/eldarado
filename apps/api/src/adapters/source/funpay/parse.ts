@@ -194,17 +194,20 @@ const gameDataFor = (
       };
     case 'honkai-impact-3rd':
       return {
+        titleEn,
         accountLevel: toInt(attrs.level),
         tickets: titleNumber(title, 'тикет(?:ов|а|ы)?|билет(?:ов|а|ы)?|купон(?:ов|а|ы)?|tickets?'),
         server: attrs.server ?? null,
       };
     case 'rust':
       return {
+        titleEn,
         offerType: attrs.type ?? null,
         server: attrs.server ?? null,
       };
     case 'league-of-legends':
       return {
+        titleEn,
         accountLevel: toInt(attrs.level),
         champions: toInt(attrs.hero),
         skins: toInt(attrs.skin),
@@ -214,6 +217,7 @@ const gameDataFor = (
       };
     case 'mobile-legends':
       return {
+        titleEn,
         accountLevel: toInt(attrs.lvl),
         heroes: toInt(attrs.hero),
         skins: toInt(attrs.skin),
@@ -223,6 +227,7 @@ const gameDataFor = (
       };
     case 'clash-of-clans':
       return {
+        titleEn,
         townHallLevel: toInt(attrs.level),
         builderHallLevel: toInt(attrs.level2),
       };

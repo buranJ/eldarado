@@ -75,6 +75,19 @@ test('maps both additional games to Eldorado account categories', () => {
   });
 });
 
+test('maps the five new FunPay games to their Eldorado account categories', () => {
+  const expected: Record<string, string> = {
+    'honkai-impact-3rd': '154',
+    rust: '37',
+    'league-of-legends': '17',
+    'mobile-legends': '55',
+    'clash-of-clans': '18',
+  };
+  for (const [gameId, eldoradoId] of Object.entries(expected)) {
+    assert.equal(ELDORADO_ACCOUNT_GAMES[gameId]?.gameId, eldoradoId);
+  }
+});
+
 test('adds the required Arknights Global trade environment', () => {
   const game = ELDORADO_ACCOUNT_GAMES['eldorado-166'];
   const payload = buildAccountOfferPayload(

@@ -105,6 +105,7 @@ test('parses Honkai Impact 3rd and Clash of Clans category attributes', () => {
   assert.equal(honkai.gameData.accountLevel, 58);
   assert.equal(honkai.gameData.tickets, 14);
   assert.equal(honkai.gameData.server, '7503');
+  assert.match(String(honkai.gameData.titleEn), /Valkyries.*Tickets/i);
 
   const [clans] = parseCategory(
     categoryOffer('data-f-level="13" data-f-level2="7"',
@@ -114,6 +115,7 @@ test('parses Honkai Impact 3rd and Clash of Clans category attributes', () => {
   assert.equal(clans.sellerTitle, 'Ратуша 13');
   assert.equal(clans.gameData.townHallLevel, 13);
   assert.equal(clans.gameData.builderHallLevel, 7);
+  assert.match(String(clans.gameData.titleEn), /TH 13/i);
 });
 
 test('keeps sales and excludes rentals in categories that mix offer types', () => {
@@ -127,6 +129,7 @@ test('keeps sales and excludes rentals in categories that mix offer types', () =
   assert.equal(league.sellerTitle, 'Скины и чемпионы');
   assert.equal(league.gameData.champions, 140);
   assert.equal(league.gameData.skins, 200);
+  assert.match(String(league.gameData.titleEn), /skins.*champions/i);
   assert.equal(parseCategory(rental, 'mobile-legends').length, 0);
 
   const [mobile] = parseCategory(categoryOffer(
@@ -136,6 +139,7 @@ test('keeps sales and excludes rentals in categories that mix offer types', () =
   assert.equal(mobile.gameData.accountLevel, 199);
   assert.equal(mobile.gameData.heroes, 132);
   assert.equal(mobile.gameData.winRate, 50);
+  assert.doesNotMatch(String(mobile.gameData.titleEn), /\p{Script=Cyrillic}/u);
 
   const [rust] = parseCategory(categoryOffer(
     'data-f-type="продажа" data-server="1223"',
@@ -143,4 +147,5 @@ test('keeps sales and excludes rentals in categories that mix offer types', () =
   ), 'rust');
   assert.equal(rust.sellerTitle, 'Rust Steam с почтой');
   assert.equal(rust.gameData.offerType, 'продажа');
+  assert.match(String(rust.gameData.titleEn), /Rust Steam.*email/i);
 });

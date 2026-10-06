@@ -50,6 +50,7 @@ export const translateWithRules = (
 
   translated = translated
     .replace(/(\d+)\s*(?:LVL|lvl)\b/giu, '$1 LVL')
+    .replace(/(\d+)\s*к(?=\s|$|[^\p{L}\p{N}])/giu, '$1K')
     .replace(/\p{Script=Cyrillic}+/gu, ' ')
     .replace(/\s*([|•,+])\s*/g, ' $1 ')
     .replace(/([|•,+])(?:\s*\1)+/g, '$1')

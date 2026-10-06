@@ -207,8 +207,9 @@ export function EldoradoBulkPublishModal({
       <div className="max-h-[68vh] space-y-4 overflow-y-auto pr-1">
         <div className="rounded-lg border border-[#594b25] bg-[#251f12] p-3 text-[11.5px] leading-relaxed text-[#e1ca82]">
           Нажимая «Опубликовать», вы принимаете правила Eldorado. Для каждого лота будут
-          созданы временные реквизиты; замените их настоящими в Eldorado до завершения проверки.
-          Публикация выполняется последовательно, по одному аккаунту.
+          отправлены временные реквизиты. Eldorado требует реальные данные уже при публикации;
+          это может привести к ограничению аккаунта. Публикация выполняется последовательно,
+          по одному аккаунту.
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-[11.5px]">
