@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-labelledby="title desc">
+  <title id="title">GameStock — Обмен</title>
+  <desc id="desc">Переплетённые разнонаправленные стрелки обозначают покупку и продажу игровых аккаунтов.</desc>
+  <rect width="1000" height="300" rx="24" fill="#10121B"/>
+  <rect x="1" y="1" width="998" height="298" rx="23" fill="none" stroke="#373047" stroke-width="2"/>
+  <text x="54" y="39" fill="#B0A3BD" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">03 / ОБМЕН</text>
+  <rect x="54" y="65" width="170" height="170" rx="85" fill="#221C34" stroke="#594A72" stroke-width="2"/>
+  <path d="M94 124 H172 L155 107 M172 124 L155 141" fill="none" stroke="#B58AFF" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M184 177 H106 L123 160 M106 177 L123 194" fill="none" stroke="#FFB86A" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="139" cy="150" r="9" fill="#F5E9FF"/>
+  <text x="271" y="151" fill="#FAF6FF" font-family="Inter, Arial, sans-serif" font-size="70" font-weight="750" letter-spacing="-4">Game<tspan fill="#B58AFF">Stock</tspan></text>
+  <text x="275" y="193" fill="#B6A9C6" font-family="Inter, Arial, sans-serif" font-size="19" letter-spacing="0.2">От находки до продажи — в одном месте</text>
+  <circle cx="906" cy="235" r="11" fill="#B58AFF"/>
+  <circle cx="938" cy="235" r="11" fill="#FFB86A"/>
+</svg>

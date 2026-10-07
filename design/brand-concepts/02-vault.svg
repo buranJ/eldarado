@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-labelledby="title desc">
+  <title id="title">GameStock — Хранилище</title>
+  <desc id="desc">Бирюзовый щит с вложенными карточками аккаунтов, логотип GameStock.</desc>
+  <rect width="1000" height="300" rx="24" fill="#0C1417"/>
+  <rect x="1" y="1" width="998" height="298" rx="23" fill="none" stroke="#25403F" stroke-width="2"/>
+  <text x="54" y="39" fill="#8AADA9" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">02 / ХРАНИЛИЩЕ</text>
+  <path d="M139 67 L208 94 Q223 100 223 115 V167 Q223 205 139 240 Q55 205 55 167 V115 Q55 100 70 94 Z" fill="#102C30" stroke="#54D9C2" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="93" y="112" width="74" height="63" rx="8" fill="#173F43" stroke="#62AFA8" stroke-width="3"/>
+  <rect x="111" y="128" width="74" height="63" rx="8" fill="#174947" stroke="#75E8D2" stroke-width="3"/>
+  <circle cx="131" cy="150" r="8" fill="#83F5DB"/>
+  <path d="M120 173 Q130 160 141 173" fill="none" stroke="#83F5DB" stroke-width="4" stroke-linecap="round"/>
+  <path d="M152 148 H174 M152 161 H170" stroke="#83F5DB" stroke-width="4" stroke-linecap="round"/>
+  <text x="271" y="151" fill="#F2FFFC" font-family="Inter, Arial, sans-serif" font-size="70" font-weight="750" letter-spacing="-4">Game<tspan fill="#60DEC8">Stock</tspan></text>
+  <text x="275" y="193" fill="#9BBDB8" font-family="Inter, Arial, sans-serif" font-size="19" letter-spacing="0.2">Ваш инвентарь. Ваши правила.</text>
+  <circle cx="906" cy="235" r="11" fill="#174947"/>
+  <circle cx="938" cy="235" r="11" fill="#60DEC8"/>
+</svg>

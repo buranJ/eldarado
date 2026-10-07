@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-labelledby="title desc">
+  <title id="title">GameStock — Сетка</title>
+  <desc id="desc">Пиксельная сетка с выделенной восходящей диагональю, логотип GameStock.</desc>
+  <rect width="1000" height="300" rx="24" fill="#111419"/>
+  <rect x="1" y="1" width="998" height="298" rx="23" fill="none" stroke="#3A3D3C" stroke-width="2"/>
+  <text x="54" y="39" fill="#A9AFAA" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">05 / СЕТКА</text>
+  <rect x="54" y="65" width="170" height="170" rx="36" fill="#222721"/>
+  <rect x="84" y="167" width="36" height="36" rx="8" fill="#566E59"/>
+  <rect x="127" y="167" width="36" height="36" rx="8" fill="#394B3E"/>
+  <rect x="170" y="167" width="36" height="36" rx="8" fill="#394B3E"/>
+  <rect x="84" y="124" width="36" height="36" rx="8" fill="#394B3E"/>
+  <rect x="127" y="124" width="36" height="36" rx="8" fill="#BCE35B"/>
+  <rect x="170" y="124" width="36" height="36" rx="8" fill="#394B3E"/>
+  <rect x="84" y="81" width="36" height="36" rx="8" fill="#394B3E"/>
+  <rect x="127" y="81" width="36" height="36" rx="8" fill="#394B3E"/>
+  <rect x="170" y="81" width="36" height="36" rx="8" fill="#D8F784"/>
+  <path d="M101 184 L145 142 L188 99" fill="none" stroke="#F5FFDA" stroke-opacity=".9" stroke-width="4" stroke-linecap="round"/>
+  <text x="271" y="151" fill="#F8FAF5" font-family="Inter, Arial, sans-serif" font-size="70" font-weight="750" letter-spacing="-4">Game<tspan fill="#C8EF67">Stock</tspan></text>
+  <text x="275" y="193" fill="#ADB9A5" font-family="Inter, Arial, sans-serif" font-size="19" letter-spacing="0.2">Все игры. Один порядок.</text>
+  <circle cx="906" cy="235" r="11" fill="#566E59"/>
+  <circle cx="938" cy="235" r="11" fill="#C8EF67"/>
+</svg>

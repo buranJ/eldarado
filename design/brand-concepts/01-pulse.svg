@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-labelledby="title desc">
+  <title id="title">GameStock — Пульс</title>
+  <desc id="desc">Синий знак с растущими столбцами и зелёным акцентом, логотип GameStock.</desc>
+  <rect width="1000" height="300" rx="24" fill="#0D1018"/>
+  <rect x="1" y="1" width="998" height="298" rx="23" fill="none" stroke="#283047" stroke-width="2"/>
+  <text x="54" y="39" fill="#8C9BB7" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">01 / ПУЛЬС</text>
+  <rect x="54" y="65" width="170" height="170" rx="38" fill="#171F38" stroke="#354475" stroke-width="2"/>
+  <rect x="91" y="160" width="22" height="40" rx="7" fill="#577BFF"/>
+  <rect x="126" y="133" width="22" height="67" rx="7" fill="#7898FF"/>
+  <rect x="161" y="103" width="22" height="97" rx="7" fill="#49D79C"/>
+  <path d="M91 147 L137 117 L171 87" fill="none" stroke="#A7BCFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <path d="M161 88 L172 85 L170 97" fill="none" stroke="#A7BCFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <text x="271" y="151" fill="#F6F8FF" font-family="Inter, Arial, sans-serif" font-size="70" font-weight="750" letter-spacing="-4">Game<tspan fill="#7898FF">Stock</tspan></text>
+  <text x="275" y="193" fill="#9AA7C0" font-family="Inter, Arial, sans-serif" font-size="19" letter-spacing="0.2">Игровые аккаунты под контролем</text>
+  <circle cx="906" cy="235" r="11" fill="#577BFF"/>
+  <circle cx="938" cy="235" r="11" fill="#49D79C"/>
+</svg>

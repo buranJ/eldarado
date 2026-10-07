@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-labelledby="title desc">
+  <title id="title">GameStock — Монограмма</title>
+  <desc id="desc">Геометрическая буква G со стрелкой роста, логотип GameStock в синем и оранжевом цветах.</desc>
+  <rect width="1000" height="300" rx="24" fill="#10151C"/>
+  <rect x="1" y="1" width="998" height="298" rx="23" fill="none" stroke="#314056" stroke-width="2"/>
+  <text x="54" y="39" fill="#A4B4C7" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2">04 / МОНОГРАММА</text>
+  <rect x="54" y="65" width="170" height="170" rx="38" fill="#142538"/>
+  <path d="M177 108 A56 56 0 1 0 184 179" fill="none" stroke="#6DB8FF" stroke-width="24" stroke-linecap="round"/>
+  <path d="M143 159 H195 L177 141 M195 159 L177 177" fill="none" stroke="#FF936C" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="271" y="151" fill="#F4F9FF" font-family="Inter, Arial, sans-serif" font-size="70" font-weight="750" letter-spacing="-4">Game<tspan fill="#6DB8FF">Stock</tspan></text>
+  <text x="275" y="193" fill="#A3B5C7" font-family="Inter, Arial, sans-serif" font-size="19" letter-spacing="0.2">Находите. Решайте. Продавайте.</text>
+  <circle cx="906" cy="235" r="11" fill="#6DB8FF"/>
+  <circle cx="938" cy="235" r="11" fill="#FF936C"/>
+</svg>
