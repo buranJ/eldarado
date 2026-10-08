@@ -123,7 +123,7 @@ export function EldoradoBulkPublishModal({
     for (const entry of queue) {
       updateEntry(entry.item.id, { status: 'publishing', error: null });
       const salePrice = entry.item.resale.manualPrice ?? entry.item.resale.recommendedPrice;
-      const credentials = createTemporaryCredentials(entry.item.accountId);
+      const credentials = createTemporaryCredentials();
       try {
         const result = await api.publishToEldorado(entry.item.id, {
           title: entry.preview.title,
@@ -207,9 +207,10 @@ export function EldoradoBulkPublishModal({
       <div className="max-h-[68vh] space-y-4 overflow-y-auto pr-1">
         <div className="rounded-lg border border-[#594b25] bg-[#251f12] p-3 text-[11.5px] leading-relaxed text-[#e1ca82]">
           Нажимая «Опубликовать», вы принимаете правила Eldorado. Для каждого лота будут
-          отправлены временные реквизиты. Eldorado требует реальные данные уже при публикации;
-          это может привести к ограничению аккаунта. Публикация выполняется последовательно,
-          по одному аккаунту.
+          отдельно созданы случайные временные реквизиты с @gmail.com. Они попадут только
+          в поля доступа к аккаунту, не в описание или комментарии. Замените их настоящими
+          напрямую в Eldorado в течение согласованных с поддержкой 24 часов. Публикация
+          выполняется последовательно, по одному аккаунту.
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-[11.5px]">

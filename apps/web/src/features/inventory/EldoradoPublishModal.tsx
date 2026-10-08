@@ -58,15 +58,9 @@ export function EldoradoPublishModal({
   const [image, setImage] = useState<File | null>(null);
   const [replacementImageUrl, setReplacementImageUrl] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [temporaryCredentials] = useState(() => createTemporaryCredentials(item.accountId));
+  const [temporaryCredentials] = useState(createTemporaryCredentials);
   const [accountLogin, setAccountLogin] = useState(temporaryCredentials.login);
   const [accountPassword, setAccountPassword] = useState(temporaryCredentials.password);
-  const [emailProviderUrl, setEmailProviderUrl] = useState('');
-  const [emailLogin, setEmailLogin] = useState('');
-  const [emailPassword, setEmailPassword] = useState('');
-  const [mfaLogin, setMfaLogin] = useState('');
-  const [mfaPassword, setMfaPassword] = useState('');
-  const [additionalInfo, setAdditionalInfo] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -131,19 +125,12 @@ export function EldoradoPublishModal({
         ...imageInput,
         accountLogin,
         accountPassword,
-        emailProviderUrl: emailProviderUrl || undefined,
-        emailLogin: emailLogin || undefined,
-        emailPassword: emailPassword || undefined,
-        mfaLogin: mfaLogin || undefined,
-        mfaPassword: mfaPassword || undefined,
-        additionalInfo: additionalInfo || undefined,
         termsAccepted: true,
         rulesAccepted: true,
       });
       setResult(published);
+      setAccountLogin('');
       setAccountPassword('');
-      setEmailPassword('');
-      setMfaPassword('');
       onPublished();
       toast.push({
         tone: 'success',
@@ -206,17 +193,17 @@ export function EldoradoPublishModal({
       <div className="max-h-[68vh] space-y-4 overflow-y-auto pr-1">
         {result ? (
           <div className="rounded-lg border border-[#285b35] bg-[#13251a] p-4 text-[12px] text-pos">
-            Лот создан. Если вы оставили временные реквизиты, немедленно замените их в
-            Eldorado настоящими: площадка требует корректные данные уже при публикации.
-            GameStock не сохранил реквизиты в своей базе.
+            Лот создан с временными реквизитами. Замените их настоящими непосредственно в
+            Eldorado в течение согласованных с поддержкой 24 часов. GameStock не сохранил
+            реквизиты в своей базе и не отправлял их в комментарии.
           </div>
         ) : (
           <>
             <div className="rounded-lg border border-[#594b25] bg-[#251f12] p-3 text-[11.5px] leading-relaxed text-[#e1ca82]">
-              Eldorado требует реальные данные доступа уже при публикации. Сейчас подставлены
-              временные реквизиты; публикация с ними может привести к ограничению аккаунта.
-              Укажите настоящие данные до отправки. Они передаются Eldorado и не сохраняются
-              в базе GameStock.
+              Для лота созданы случайные временные реквизиты. Они попадут только в поля
+              доступа к аккаунту на Eldorado, не в описание или комментарии. Замените их
+              настоящими напрямую в Eldorado в течение согласованных с поддержкой 24 часов.
+              Настоящие пароли в GameStock не вводите.
             </div>
 
             <div className="grid grid-cols-[1fr_150px] gap-3">
@@ -305,53 +292,22 @@ export function EldoradoPublishModal({
               <h3 className="mb-3 text-[12px] font-semibold text-ink">Реквизиты игрового аккаунта</h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Временный логин аккаунта">
-                  <TextInput value={accountLogin} onChange={(e) => setAccountLogin(e.target.value)} />
+                  <TextInput value={accountLogin} readOnly />
                 </FormField>
                 <FormField label="Временный пароль аккаунта">
                   <TextInput
                     type="password"
                     autoComplete="new-password"
                     value={accountPassword}
-                    onChange={(e) => setAccountPassword(e.target.value)}
+                    readOnly
                   />
                 </FormField>
               </div>
               <p className="mt-2 text-[10.5px] leading-relaxed text-ink-3">
-                Сформированы из ID аккаунта и времени публикации. Можно изменить перед отправкой;
-                после публикации обязательно замените их настоящими в Eldorado.
+                Реквизиты сгенерированы случайно и не содержат ID аккаунта или времени.
+                Адрес @gmail.com не создаётся в Google и может принадлежать другому человеку.
               </p>
             </div>
-
-            <div className="border-t border-line pt-4">
-              <h3 className="mb-3 text-[12px] font-semibold text-ink">Почта аккаунта (необязательно)</h3>
-              <div className="grid grid-cols-3 gap-3">
-                <FormField label="URL провайдера">
-                  <TextInput placeholder="https://mail.google.com" value={emailProviderUrl} onChange={(e) => setEmailProviderUrl(e.target.value)} />
-                </FormField>
-                <FormField label="Логин почты">
-                  <TextInput value={emailLogin} onChange={(e) => setEmailLogin(e.target.value)} />
-                </FormField>
-                <FormField label="Пароль почты">
-                  <TextInput type="password" autoComplete="new-password" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} />
-                </FormField>
-              </div>
-            </div>
-
-            <div className="border-t border-line pt-4">
-              <h3 className="mb-3 text-[12px] font-semibold text-ink">2FA (необязательно)</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Логин 2FA">
-                  <TextInput value={mfaLogin} onChange={(e) => setMfaLogin(e.target.value)} />
-                </FormField>
-                <FormField label="Пароль 2FA">
-                  <TextInput type="password" autoComplete="new-password" value={mfaPassword} onChange={(e) => setMfaPassword(e.target.value)} />
-                </FormField>
-              </div>
-            </div>
-
-            <FormField label="Дополнительная информация (не вводите сюда пароли)">
-              <textarea className={textareaClass} rows={3} value={additionalInfo} onChange={(e) => setAdditionalInfo(e.target.value)} />
-            </FormField>
 
             <div className="rounded-lg border border-[#594b25] bg-[#251f12] p-3 text-[11.5px] leading-relaxed text-[#e1ca82]">
               Нажимая «Опубликовать лот», вы подтверждаете принятие Terms of Service
