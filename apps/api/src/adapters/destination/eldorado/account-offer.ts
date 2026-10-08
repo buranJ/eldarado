@@ -1,4 +1,5 @@
 import type { ListingDraft } from '../types.js';
+import type { SelectedOfferAttribute } from './offer-options.js';
 
 export const ELDORADO_ACCOUNT_GAMES: Record<
   string,
@@ -70,7 +71,7 @@ export interface EldoradoAccountOfferPayload {
     gameId: string;
     category: 'Account';
     tradeEnvironmentId: string | null;
-    offerAttributes: never[];
+    offerAttributes: SelectedOfferAttribute[];
   };
   accountDeliveryDetails: Array<{
     accountDetails: { accountLogin: string; accountPassword: string };
@@ -109,6 +110,7 @@ export const buildAccountOfferPayload = (
   input: EldoradoAccountPublishInput,
   images: [EldoradoOfferImage, ...EldoradoOfferImage[]],
   tradeEnvironmentId: string | null = null,
+  offerAttributes: SelectedOfferAttribute[] = [],
 ): EldoradoAccountOfferPayload => {
   const [mainOfferImage, ...offerImages] = images;
   return {
@@ -130,7 +132,7 @@ export const buildAccountOfferPayload = (
       gameId,
       category: 'Account',
       tradeEnvironmentId,
-      offerAttributes: [],
+      offerAttributes,
     },
     accountDeliveryDetails: [
       {

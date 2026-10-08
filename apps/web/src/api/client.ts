@@ -119,6 +119,13 @@ export interface EldoradoPublishPreview {
   currency: 'USD';
   automaticDelivery: true;
   sourceImageUrls: string[];
+  requiredAttributes: Array<{
+    id: string;
+    name: string;
+    values: Array<{ id: string; name: string }>;
+  }>;
+  tradeEnvironments: Array<{ id: string; name: string; value: string }>;
+  defaultTradeEnvironmentId: string | null;
 }
 
 export interface EldoradoPublishInput {
@@ -130,6 +137,8 @@ export interface EldoradoPublishInput {
   imageFileName?: string;
   accountLogin: string;
   accountPassword: string;
+  tradeEnvironmentId?: string | null;
+  offerAttributes?: Record<string, string>;
   emailProviderUrl?: string;
   emailLogin?: string;
   emailPassword?: string;

@@ -9,6 +9,10 @@ import {
   eldoradoOfferUrl,
 } from '../adapters/destination/eldorado/account-offer.js';
 import type { EldoradoOfferImage } from '../adapters/destination/eldorado/account-offer.js';
+import {
+  loadAccountOfferOptions,
+  resolveAccountOfferSelection,
+} from '../adapters/destination/eldorado/offer-options.js';
 import { buildDraft } from '../adapters/destination/draft.js';
 import { ExtractionSchema, toAttributeMap } from '../analysis/schema.js';
 import { prisma } from '../lib/db.js';
@@ -36,6 +40,8 @@ const publishSchema = z.object({
   imageFileName: z.string().trim().min(1).max(255).optional(),
   accountLogin: z.string().trim().min(1).max(500),
   accountPassword: z.string().min(1).max(500),
+  tradeEnvironmentId: z.string().max(100).nullable().optional(),
+  offerAttributes: z.record(z.string(), z.string().max(100)).optional(),
   emailProviderUrl: optionalField(1_000),
   emailLogin: optionalField(500),
   emailPassword: optionalField(500),
@@ -432,17 +438,26 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
     if (!item) return reply.code(404).send({ error: 'Позиция не найдена' });
     const game = ELDORADO_ACCOUNT_GAMES[item.gameId];
     if (!game) return reply.code(422).send({ error: `Для игры ${item.gameId} Eldorado не настроен` });
-    const draft = draftFor(item);
-    return {
-      title: draft.title,
-      description: draft.description,
-      gameId: game.gameId,
-      currency: 'USD',
-      automaticDelivery: true,
-      sourceImageUrls: item.listing.images.map(
-        (image) => `/api/listings/${item.listing.id}/images/${image.position}`,
-      ),
-    };
+    try {
+      const options = await loadAccountOfferOptions(game.gameId);
+      const draft = draftFor(item);
+      return {
+        title: draft.title,
+        description: draft.description,
+        gameId: game.gameId,
+        currency: 'USD',
+        automaticDelivery: true,
+        sourceImageUrls: item.listing.images.map(
+          (image) => `/api/listings/${item.listing.id}/images/${image.position}`,
+        ),
+        ...options,
+        defaultTradeEnvironmentId: game.tradeEnvironmentId ?? null,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = error instanceof EldoradoApiError ? error.status : 502;
+      return reply.code(status).send({ error: message });
+    }
   });
 
   app.post(
@@ -474,6 +489,12 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
 
       try {
         const eldoradoClient = await eldoradoClientForUser(request.user!.id);
+        const offerOptions = await loadAccountOfferOptions(game.gameId);
+        const selection = resolveAccountOfferSelection(
+          offerOptions,
+          input,
+          game.tradeEnvironmentId,
+        );
         const storedImages = item.listing.images.slice(0, 4);
         const imageInputs: Array<{ bytes: Buffer; mimeType: string; fileName: string }> = await Promise.all(
           storedImages.map(async (image) => ({
@@ -517,7 +538,8 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
             },
           },
           uploadedImages as [EldoradoOfferImage, ...EldoradoOfferImage[]],
-          game.tradeEnvironmentId ?? null,
+          selection.tradeEnvironmentId,
+          selection.offerAttributes,
         );
         const offerId = await eldoradoClient.createAccountOffer(payload);
         const publishedAt = new Date();

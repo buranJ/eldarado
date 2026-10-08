@@ -13,6 +13,12 @@ import { FieldLabel, Select, TextInput } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { toBase } from '@/utils/money';
 import { createTemporaryCredentials } from './temporary-credentials';
+import {
+  EldoradoOfferOptionsFields,
+  initialOfferSelection,
+  missingOfferOptions,
+} from './EldoradoOfferOptionsFields';
+import type { EldoradoOfferSelection } from './EldoradoOfferOptionsFields';
 import { getGame } from '@/config/games';
 
 const textareaClass =
@@ -55,6 +61,10 @@ export function EldoradoPublishModal({
   const [description, setDescription] = useState('');
   const [priceUsd, setPriceUsd] = useState(() => toBase(salePrice, 'USD').amount.toFixed(2));
   const [originalEmail, setOriginalEmail] = useState('yes');
+  const [offerSelection, setOfferSelection] = useState<EldoradoOfferSelection>({
+    tradeEnvironmentId: '',
+    offerAttributes: {},
+  });
   const [image, setImage] = useState<File | null>(null);
   const [replacementImageUrl, setReplacementImageUrl] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -71,6 +81,7 @@ export function EldoradoPublishModal({
         setPreview(value);
         setTitle(value.title);
         setDescription(value.description);
+        setOfferSelection(initialOfferSelection(value));
       })
       .catch((reason) => {
         if (active) setError(reason instanceof Error ? reason.message : String(reason));
@@ -112,6 +123,9 @@ export function EldoradoPublishModal({
     if (!accountLogin.trim() || !accountPassword) {
       return setError('Укажите логин и пароль игрового аккаунта');
     }
+    if (preview && missingOfferOptions(preview, offerSelection).length > 0) {
+      return setError('Заполните обязательные параметры игры для Eldorado');
+    }
     setSubmitting(true);
     try {
       const imageInput = image
@@ -125,6 +139,8 @@ export function EldoradoPublishModal({
         ...imageInput,
         accountLogin,
         accountPassword,
+        tradeEnvironmentId: offerSelection.tradeEnvironmentId || null,
+        offerAttributes: offerSelection.offerAttributes,
         termsAccepted: true,
         rulesAccepted: true,
       });
@@ -229,6 +245,15 @@ export function EldoradoPublishModal({
                 onChange={(e) => setDescription(e.target.value)}
               />
             </FormField>
+
+            {preview ? (
+              <EldoradoOfferOptionsFields
+                preview={preview}
+                selection={offerSelection}
+                onChange={setOfferSelection}
+                disabled={submitting}
+              />
+            ) : null}
 
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Оригинальная почта">

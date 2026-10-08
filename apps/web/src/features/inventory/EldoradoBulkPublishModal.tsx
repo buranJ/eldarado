@@ -13,6 +13,12 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatMoney, toBase } from '@/utils/money';
 import { createTemporaryCredentials } from './temporary-credentials';
+import {
+  EldoradoOfferOptionsFields,
+  initialOfferSelection,
+  missingOfferOptions,
+} from './EldoradoOfferOptionsFields';
+import type { EldoradoOfferSelection } from './EldoradoOfferOptionsFields';
 
 type EntryStatus = 'checking' | 'ready' | 'publishing' | 'published' | 'error';
 
@@ -22,7 +28,13 @@ interface BulkEntry {
   status: EntryStatus;
   error: string | null;
   url: string | null;
+  selection: EldoradoOfferSelection;
 }
+
+const emptySelection = (): EldoradoOfferSelection => ({
+  tradeEnvironmentId: '',
+  offerAttributes: {},
+});
 
 const statusIcon = (status: EntryStatus) => {
   if (status === 'checking' || status === 'publishing') {
@@ -54,7 +66,14 @@ export function EldoradoBulkPublishModal({
   onFinished: () => void;
 }) {
   const [entries, setEntries] = useState<BulkEntry[]>(() =>
-    items.map((item) => ({ item, preview: null, status: 'checking', error: null, url: null })),
+    items.map((item) => ({
+      item,
+      preview: null,
+      status: 'checking',
+      error: null,
+      url: null,
+      selection: emptySelection(),
+    })),
   );
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -68,9 +87,15 @@ export function EldoradoBulkPublishModal({
         try {
           const preview = await api.eldoradoPreview(item.id);
           if (preview.sourceImageUrls.length === 0) {
-            return { item, preview, status: 'error', error: 'Нет сохранённых фотографий', url: null };
+            return {
+              item, preview, status: 'error', error: 'Нет сохранённых фотографий', url: null,
+              selection: initialOfferSelection(preview),
+            };
           }
-          return { item, preview, status: 'ready', error: null, url: null };
+          return {
+            item, preview, status: 'ready', error: null, url: null,
+            selection: initialOfferSelection(preview),
+          };
         } catch (error) {
           return {
             item,
@@ -78,6 +103,7 @@ export function EldoradoBulkPublishModal({
             status: 'error',
             error: error instanceof Error ? error.message : String(error),
             url: null,
+            selection: emptySelection(),
           };
         }
       }),
@@ -90,7 +116,14 @@ export function EldoradoBulkPublishModal({
   }, [items]);
 
   const checking = entries.some((entry) => entry.status === 'checking');
-  const readyCount = entries.filter((entry) => entry.status === 'ready').length;
+  const unconfiguredCount = entries.filter(
+    (entry) => entry.status === 'ready' && entry.preview &&
+      missingOfferOptions(entry.preview, entry.selection).length > 0,
+  ).length;
+  const readyCount = entries.filter(
+    (entry) => entry.status === 'ready' && entry.preview &&
+      missingOfferOptions(entry.preview, entry.selection).length === 0,
+  ).length;
   const publishedCount = entries.filter((entry) => entry.status === 'published').length;
   const errorCount = entries.filter((entry) => entry.status === 'error').length;
   const totalValue = useMemo(
@@ -111,7 +144,7 @@ export function EldoradoBulkPublishModal({
   };
 
   const publishAll = async () => {
-    if (running || readyCount === 0) return;
+    if (running || readyCount === 0 || unconfiguredCount > 0) return;
     setRunning(true);
     const queue = entries.filter(
       (entry): entry is BulkEntry & { preview: EldoradoPublishPreview } =>
@@ -132,6 +165,8 @@ export function EldoradoBulkPublishModal({
           hasOriginalEmail: true,
           accountLogin: credentials.login,
           accountPassword: credentials.password,
+          tradeEnvironmentId: entry.selection.tradeEnvironmentId || null,
+          offerAttributes: entry.selection.offerAttributes,
           termsAccepted: true,
           rulesAccepted: true,
         });
@@ -175,12 +210,14 @@ export function EldoradoBulkPublishModal({
               size="md"
               icon={Upload}
               className="h-10 px-5 text-[14px]"
-              disabled={running || checking || readyCount === 0}
+              disabled={running || checking || readyCount === 0 || unconfiguredCount > 0}
               onClick={() => void publishAll()}
             >
               {running
                 ? `Публикация ${processedCount}/${queueTotal}`
-                : `Опубликовать ${readyCount}`}
+                : unconfiguredCount > 0
+                  ? 'Заполните параметры'
+                  : `Опубликовать ${readyCount}`}
             </Button>
           ) : errorCount > 0 ? (
             <Button
@@ -231,48 +268,68 @@ export function EldoradoBulkPublishModal({
           </div>
         </div>
 
+        {unconfiguredCount > 0 ? (
+          <p className="text-[11.5px] text-[#e1ca82]">
+            Для {unconfiguredCount} аккаунтов выберите обязательные параметры Eldorado ниже.
+          </p>
+        ) : null}
+
         <div className="overflow-hidden rounded-lg border border-line">
           {entries.map((entry) => {
             const salePrice = entry.item.resale.manualPrice ?? entry.item.resale.recommendedPrice;
             return (
-              <div
-                key={entry.item.id}
-                className="grid grid-cols-[1fr_90px_130px] items-center gap-3 border-b border-line px-3 py-2.5 last:border-b-0"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-[12px] font-medium text-ink">
-                    {entry.item.accountId} · {entry.item.title}
+              <div key={entry.item.id} className="border-b border-line last:border-b-0">
+                <div className="grid grid-cols-[1fr_90px_130px] items-center gap-3 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-medium text-ink">
+                      {entry.item.accountId} · {entry.item.title}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-ink-4">
+                      <span>{entry.preview?.sourceImageUrls.length ?? 0} фото</span>
+                      {entry.error ? (
+                        <span
+                          className="inline-flex min-w-0 items-center gap-1 truncate text-neg"
+                          title={entry.error}
+                        >
+                          <AlertTriangle size={11} className="shrink-0" /> {entry.error}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-ink-4">
-                    <span>{entry.preview?.sourceImageUrls.length ?? 0} фото</span>
-                    {entry.error ? (
-                      <span
-                        className="inline-flex min-w-0 items-center gap-1 truncate text-neg"
-                        title={entry.error}
+                  <span className="num text-right text-[12px] text-ink-2">
+                    {formatMoney(toBase(salePrice, 'USD'))}
+                  </span>
+                  <div className="flex items-center justify-end gap-1.5 text-[11.5px] text-ink-2">
+                    {statusIcon(entry.status)}
+                    <span>
+                      {entry.status === 'ready' && entry.preview &&
+                      missingOfferOptions(entry.preview, entry.selection).length > 0
+                        ? 'Нужны параметры'
+                        : statusLabel[entry.status]}
+                    </span>
+                    {entry.url ? (
+                      <a
+                        href={entry.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        title="Открыть лот"
+                        className="text-accent"
                       >
-                        <AlertTriangle size={11} className="shrink-0" /> {entry.error}
-                      </span>
+                        <ExternalLink size={13} />
+                      </a>
                     ) : null}
                   </div>
                 </div>
-                <span className="num text-right text-[12px] text-ink-2">
-                  {formatMoney(toBase(salePrice, 'USD'))}
-                </span>
-                <div className="flex items-center justify-end gap-1.5 text-[11.5px] text-ink-2">
-                  {statusIcon(entry.status)}
-                  <span>{statusLabel[entry.status]}</span>
-                  {entry.url ? (
-                    <a
-                      href={entry.url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      title="Открыть лот"
-                      className="text-accent"
-                    >
-                      <ExternalLink size={13} />
-                    </a>
-                  ) : null}
-                </div>
+                {entry.preview && entry.status !== 'published' ? (
+                  <div className="px-3 pb-3">
+                    <EldoradoOfferOptionsFields
+                      preview={entry.preview}
+                      selection={entry.selection}
+                      onChange={(selection) => updateEntry(entry.item.id, { selection })}
+                      disabled={running}
+                    />
+                  </div>
+                ) : null}
               </div>
             );
           })}
