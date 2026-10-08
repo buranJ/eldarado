@@ -5,10 +5,27 @@ const user = { id: 'user-e2e', email: 'operator@example.com', displayName: 'Oper
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
+interface MockOfferOptions {
+  requiredAttributes: Array<{
+    id: string;
+    name: string;
+    values: Array<{ id: string; name: string }>;
+  }>;
+  tradeEnvironments: Array<{ id: string; name: string; value: string }>;
+  defaultTradeEnvironmentId: string | null;
+}
+
+const emptyOfferOptions: MockOfferOptions = {
+  requiredAttributes: [],
+  tradeEnvironments: [],
+  defaultTradeEnvironmentId: null,
+};
+
 const mockApi = async (
   page: Page,
   initiallyAuthenticated = true,
   inventoryItems: unknown[] = [],
+  offerOptionsByGame: Record<string, MockOfferOptions> = {},
 ) => {
   let authenticated = initiallyAuthenticated;
   const syncRequests: string[] = [];
@@ -60,6 +77,10 @@ const mockApi = async (
     if (path === '/api/top' || path === '/api/qualified') return json(route, { items: [], total: 0 });
     if (path === '/api/listings') return json(route, { items: [], total: 0, page: 1, pageSize: 25 });
     if (/^\/api\/inventory\/[^/]+\/eldorado\/preview$/.test(path)) {
+      const itemId = path.split('/')[3];
+      const item = (inventoryItems as Array<{ id: string; gameId: string }>).find(
+        (candidate) => candidate.id === itemId,
+      );
       return json(route, {
         title: 'Production-ready account',
         description: 'Account details',
@@ -67,6 +88,7 @@ const mockApi = async (
         currency: 'USD',
         automaticDelivery: true,
         sourceImageUrls: ['/api/listings/listing-e2e/images/1', '/api/listings/listing-e2e/images/2'],
+        ...(offerOptionsByGame[item?.gameId ?? ''] ?? emptyOfferOptions),
       });
     }
     if (/^\/api\/inventory\/[^/]+\/eldorado\/publish$/.test(path)) {
@@ -207,3 +229,128 @@ test('bulk Eldorado publication prepares and publishes every selected account', 
     expect(String(input.accountLogin)).toMatch(/@gmail\.com$/);
   }
 });
+
+const requiredSelect = (id: string, name: string, valueId: string, valueName: string) => ({
+  id,
+  name,
+  values: [{ id: valueId, name: valueName }],
+});
+
+const newGameCases: Array<{ gameId: string; options: MockOfferOptions }> = [
+  {
+    gameId: 'honkai-impact-3rd',
+    options: {
+      requiredAttributes: [],
+      tradeEnvironments: [{ id: '0', name: 'Region', value: 'EU' }],
+      defaultTradeEnvironmentId: null,
+    },
+  },
+  {
+    gameId: 'rust',
+    options: {
+      requiredAttributes: [
+        requiredSelect('premium-status', 'Premium Status', 'premium-yes', 'Yes'),
+        requiredSelect('rust-hours', 'Hours Played', 'hours-099', '0-99'),
+        requiredSelect('rust-skins', 'Skins', 'skins-014', '0-14'),
+        requiredSelect('steam-account-level', 'Steam Account Level', 'level-05', '0-5'),
+      ],
+      tradeEnvironments: [{ id: '0', name: 'Device', value: 'PC' }],
+      defaultTradeEnvironmentId: null,
+    },
+  },
+  {
+    gameId: 'league-of-legends',
+    options: {
+      requiredAttributes: [
+        requiredSelect('league-of-legends-champion-count', 'Champion Count', 'champion-119', '1-19'),
+        requiredSelect('league-of-legends-previous-rank', 'Previous Rank', 'previous-unranked', 'Unranked'),
+        requiredSelect('league-of-legends-ranked-ready', 'Ranked Ready', 'ready-yes', 'Yes'),
+        requiredSelect('league-of-legends-riot-points', 'Riot Points', 'riot-999', '0-999'),
+        requiredSelect('lol-blue-essence', 'Blue Essence', '0-19k-be', '0-19K BE'),
+        requiredSelect('lol-current-rank', 'Current Rank', 'bronze', 'Bronze'),
+        requiredSelect('lol-skins', 'Skins', '0-skins', '0 Skins'),
+      ],
+      tradeEnvironments: [{ id: '2', name: 'Server', value: 'Europe West' }],
+      defaultTradeEnvironmentId: null,
+    },
+  },
+  {
+    gameId: 'mobile-legends',
+    options: {
+      requiredAttributes: [
+        requiredSelect('mobile-legends-region', 'Region', 'region-global', 'Global'),
+      ],
+      tradeEnvironments: [{ id: '0', name: 'Device', value: 'Android' }],
+      defaultTradeEnvironmentId: null,
+    },
+  },
+  {
+    gameId: 'clash-of-clans',
+    options: {
+      requiredAttributes: [
+        requiredSelect('clash-of-clans-current-rank', 'Current Rank', 'rank-unranked', 'Unranked'),
+        requiredSelect('clash-of-clans-maxed-account', 'Maxed Account', 'maxed-yes', 'Yes'),
+        requiredSelect('clash-of-clans-town-hall', 'Town Hall', 'hall-13', '1-3'),
+        requiredSelect('coc-gems', 'Gems', 'gems-0499', '0-499'),
+      ],
+      tradeEnvironments: [],
+      defaultTradeEnvironmentId: null,
+    },
+  },
+];
+
+for (const { gameId, options } of newGameCases) {
+  test(`${gameId} requires its Eldorado fields before bulk publication`, async ({ page }) => {
+    const item = {
+      id: `item-${gameId}`,
+      accountId: `account-${gameId}`,
+      listingId: `listing-${gameId}`,
+      gameId,
+      title: `${gameId} account`,
+      url: 'https://funpay.com/lots/offer?id=123',
+      purchase: {
+        marketplace: 'funpay',
+        price: { amount: 1_000, currency: 'RUB' },
+        purchasedAt: new Date().toISOString(),
+        orderRef: null,
+        operator: 'e2e',
+      },
+      resale: {
+        marketplace: 'eldorado',
+        recommendedPrice: { amount: 2_000, currency: 'RUB' },
+        manualPrice: null,
+      },
+      expectedProfit: { amount: 1_000, currency: 'RUB' },
+      scores: null,
+      status: 'purchased',
+      updatedAt: new Date().toISOString(),
+    };
+    const api = await mockApi(page, true, [item], { [gameId]: options });
+    await page.goto('/inventory');
+    await page.getByRole('checkbox', { name: 'Выбрать все готовые аккаунты' }).check();
+    await page.getByRole('button', { name: 'Опубликовать на Eldorado' }).click();
+
+    const dialog = page.getByRole('dialog');
+    const publish = dialog.getByRole('button', { name: 'Заполните параметры' });
+    await expect(publish).toBeDisabled();
+    const selects = dialog.locator('select');
+    const expectedSelectCount = options.requiredAttributes.length +
+      (options.tradeEnvironments.length > 0 ? 1 : 0);
+    await expect(selects).toHaveCount(expectedSelectCount);
+    for (let index = 0; index < expectedSelectCount; index += 1) {
+      await selects.nth(index).selectOption({ index: 1 });
+    }
+
+    await dialog.getByRole('button', { name: 'Опубликовать 1' }).click();
+    await expect(dialog.getByText('Опубликовано:')).toBeVisible();
+    expect(api.publishRequests).toHaveLength(1);
+    const input = JSON.parse(api.publishRequests[0]) as {
+      tradeEnvironmentId: string | null;
+      offerAttributes: Record<string, string>;
+    };
+    expect(input.tradeEnvironmentId).toBe(options.tradeEnvironments[0]?.id ?? null);
+    for (const attribute of options.requiredAttributes) {
+      expect(input.offerAttributes[attribute.id]).toBe(attribute.values[0].id);
+    }
+  });
+}

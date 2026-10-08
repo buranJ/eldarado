@@ -13,12 +13,9 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatMoney, toBase } from '@/utils/money';
 import { createTemporaryCredentials } from './temporary-credentials';
-import {
-  EldoradoOfferOptionsFields,
-  initialOfferSelection,
-  missingOfferOptions,
-} from './EldoradoOfferOptionsFields';
-import type { EldoradoOfferSelection } from './EldoradoOfferOptionsFields';
+import { EldoradoOfferOptionsFields } from './EldoradoOfferOptionsFields';
+import { initialOfferSelection, missingOfferOptions } from './eldorado-offer-selection';
+import type { EldoradoOfferSelection } from './eldorado-offer-selection';
 
 type EntryStatus = 'checking' | 'ready' | 'publishing' | 'published' | 'error';
 

@@ -6,7 +6,7 @@ export const ELDORADO_ACCOUNT_GAMES: Record<
   { gameId: string; seoAlias: string; tradeEnvironmentId?: string }
 > = {
   'clash-royale': { gameId: '52', seoAlias: 'clash-royale-accounts' },
-  'pubg-mobile': { gameId: '21', seoAlias: 'pubg-mobile-accounts' },
+  'pubg-mobile': { gameId: '21', seoAlias: 'pubg-mobile-accounts-for-sale' },
   'car-parking-multiplayer': {
     gameId: '339',
     seoAlias: 'car-parking-multiplayer-accounts',

@@ -88,6 +88,13 @@ test('maps the five new FunPay games to their Eldorado account categories', () =
   }
 });
 
+test('uses the current PUBG Mobile account URL alias', () => {
+  assert.equal(
+    ELDORADO_ACCOUNT_GAMES['pubg-mobile']?.seoAlias,
+    'pubg-mobile-accounts-for-sale',
+  );
+});
+
 test('adds the required Arknights Global trade environment', () => {
   const game = ELDORADO_ACCOUNT_GAMES['eldorado-166'];
   const payload = buildAccountOfferPayload(
