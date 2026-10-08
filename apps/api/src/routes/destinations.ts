@@ -13,7 +13,11 @@ import { buildDraft } from '../adapters/destination/draft.js';
 import { ExtractionSchema, toAttributeMap } from '../analysis/schema.js';
 import { prisma } from '../lib/db.js';
 import { sourceImagePath } from '../lib/source-images.js';
-import { convertMinor, DESTINATION_FEE_RATE } from '../config/marketplaces.js';
+import {
+  convertMinor,
+  DESTINATION_FEE_RATE,
+  recommendedResaleMinor,
+} from '../config/marketplaces.js';
 import { translateGameTitle } from '../localization/games.js';
 import { calculateSaleFinancials } from '../sales/financials.js';
 
@@ -140,7 +144,7 @@ const draftFor = (item: InventoryItem) => {
   return buildDraft({
     gameName: GAME_LABELS[item.gameId] ?? item.gameId,
     sellerSummary,
-    sellMinor: item.manualMinor ?? item.recommendedMinor,
+    sellMinor: item.manualMinor ?? recommendedResaleMinor(item),
     currency: item.purchaseCurrency,
     attributes,
     autoDelivery: true,

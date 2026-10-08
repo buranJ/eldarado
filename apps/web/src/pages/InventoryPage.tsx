@@ -179,7 +179,7 @@ export function InventoryPage() {
       header: 'Расчётная',
       align: 'right',
       width: 96,
-      title: 'Базовая цена продажи: цена закупки × 2,5',
+      title: 'Базовая цена продажи: цена закупки × 2',
       render: (row) => (
         <span className="num text-[#93a8ff]">{formatMoney(row.resale.recommendedPrice)}</span>
       ),
@@ -381,7 +381,7 @@ export function InventoryPage() {
 
       <p className="text-[11.5px] leading-relaxed text-ink-4">
         Оплата на площадке-источнике проводится вручную — система только фиксирует покупку.
-        Расчётная цена равна цене закупки × 2,5; фактическую цену можно изменить вручную.
+        Расчётная цена равна цене закупки × 2; фактическую цену можно изменить вручную.
       </p>
 
       {publishTarget ? (

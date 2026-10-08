@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { logActivity } from '../pipeline/activity.js';
-import { DESTINATION_FEE_RATE } from '../config/marketplaces.js';
+import { DESTINATION_FEE_RATE, recommendedResaleMinor } from '../config/marketplaces.js';
 
 const money = (minor: number, currency: string) => ({
   amount: minor / 100,
@@ -24,7 +24,8 @@ const loadItems = (gameId: string, userId: string, status?: string) =>
   });
 
 const toApiItem = (row: Row) => {
-  const sellMinor = row.manualMinor ?? row.recommendedMinor;
+  const recommendedMinor = recommendedResaleMinor(row);
+  const sellMinor = row.manualMinor ?? recommendedMinor;
   const profitMinor = Math.round(sellMinor * (1 - DESTINATION_FEE_RATE) - row.purchaseMinor);
   return {
     id: row.id,
@@ -42,7 +43,7 @@ const toApiItem = (row: Row) => {
     },
     resale: {
       marketplace: row.resaleMarket,
-      recommendedPrice: money(row.recommendedMinor, row.purchaseCurrency),
+      recommendedPrice: money(recommendedMinor, row.purchaseCurrency),
       manualPrice: row.manualMinor === null ? null : money(row.manualMinor, row.purchaseCurrency),
     },
     expectedProfit: money(profitMinor, row.purchaseCurrency),
@@ -100,7 +101,8 @@ export const registerInventoryRoutes = (app: FastifyInstance): void => {
       return reply.code(409).send({ error: 'Позиция продана, цену менять нельзя' });
     }
 
-    const previousMinor = item.manualMinor ?? item.recommendedMinor;
+    const recommendedMinor = recommendedResaleMinor(item);
+    const previousMinor = item.manualMinor ?? recommendedMinor;
     const nextMinor = amount === null ? null : Math.round(amount * 100);
 
     await prisma.inventoryItem.update({ where: { id }, data: { manualMinor: nextMinor } });
@@ -110,7 +112,7 @@ export const registerInventoryRoutes = (app: FastifyInstance): void => {
       subject: item.listing.externalId,
       title: 'Цена продажи изменена',
       meta: `${formatMoney(previousMinor, item.purchaseCurrency)} → ${formatMoney(
-        nextMinor ?? item.recommendedMinor,
+        nextMinor ?? recommendedMinor,
         item.purchaseCurrency,
       )}${nextMinor === null ? ' (рекомендованная)' : ''}`,
       actor,
