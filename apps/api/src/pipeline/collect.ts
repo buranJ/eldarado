@@ -2,7 +2,6 @@ import type { CollectionRun } from '@gamestock/domain';
 import { prisma } from '../lib/db.js';
 import { contentHash } from '../lib/hash.js';
 import { prefilter } from './prefilter.js';
-import { PREFILTER } from '../config/prefilter.js';
 import { funPayAdapter } from '../adapters/source/funpay/index.js';
 import type { RawOffer, SourceAdapter, SourceImage } from '../adapters/source/types.js';
 import { deleteSourceImages, saveSourceImage } from '../lib/source-images.js';
@@ -57,8 +56,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
   const marketplace = options.marketplace ?? 'funpay';
   const gameId = options.gameId ?? 'clash-royale';
   const adapter = getAdapter(marketplace);
-  const config = PREFILTER[gameId];
-  if (!config) throw new Error(`Для игры ${gameId} не настроен предфильтр`);
+  if (!adapter.supports(gameId)) throw new Error(`Источник ${marketplace} не поддерживает игру ${gameId}`);
 
   const startedAt = new Date();
   const run = options.dryRun
@@ -86,7 +84,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
 
     if (options.dryRun) {
       for (const offer of offers.slice(0, options.maxListings ?? offers.length)) {
-        if (prefilter(offer, config, gameId).passed) counters.passed += 1;
+        if (prefilter(offer).passed) counters.passed += 1;
         else counters.rejected += 1;
       }
     } else {
@@ -95,7 +93,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
 
       for (const offer of offers) {
         if (options.maxListings !== undefined && storedListings >= options.maxListings) break;
-        const verdict = prefilter(offer, config, gameId);
+        const verdict = prefilter(offer);
         const hash = hashOf(offer);
         const existing = await prisma.listing.findUnique({
           where: { marketplace_externalId: { marketplace, externalId: offer.externalId } },
@@ -121,7 +119,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
           }
         }
 
-        const hasImages = (downloadedImages?.length ?? existing?.images.length ?? 0) >= 2;
+        const hasImages = (downloadedImages?.length ?? existing?.images.length ?? 0) > 0;
         if (!hasImages) {
           counters.rejected += 1;
           if (

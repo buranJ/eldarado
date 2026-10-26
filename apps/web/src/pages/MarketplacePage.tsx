@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Store, Zap } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Store, Zap } from 'lucide-react';
 import { PageHeader, MetaItem } from '@/components/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { Badge } from '@/components/ui/Badge';
@@ -94,7 +94,12 @@ export function MarketplacePage() {
       sortable: true,
       stickyLeft: 0,
       render: (row) => (
-        <span className="num text-[12px] font-medium text-ink">{row.source.listingId}</span>
+        <a href={row.source.url} target="_blank" rel="noreferrer noopener"
+          onClick={(event) => event.stopPropagation()}
+          title="Открыть на FunPay"
+          className="num inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline">
+          {row.source.listingId} <ExternalLink size={11} />
+        </a>
       ),
     },
     {

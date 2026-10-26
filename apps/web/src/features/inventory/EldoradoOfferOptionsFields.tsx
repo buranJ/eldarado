@@ -1,5 +1,5 @@
 import type { EldoradoPublishPreview } from '@/api/client';
-import { FieldLabel, Select } from '@/components/ui/Field';
+import { FieldLabel, Select, TextInput } from '@/components/ui/Field';
 import type { EldoradoOfferSelection } from './eldorado-offer-selection';
 
 const fieldName = (name: string): string => {
@@ -35,7 +35,7 @@ export function EldoradoOfferOptionsFields({
   onChange: (selection: EldoradoOfferSelection) => void;
   disabled?: boolean;
 }) {
-  if (preview.tradeEnvironments.length === 0 && preview.requiredAttributes.length === 0) {
+  if (preview.tradeEnvironments.length === 0 && preview.requiredAttributes.length === 0 && preview.requiredNumericAttributes.length === 0) {
     return null;
   }
 
@@ -86,6 +86,30 @@ export function EldoradoOfferOptionsFields({
                 })),
               ]}
             />
+          </label>
+        ))}
+        {preview.requiredNumericAttributes.map((attribute) => (
+          <label key={attribute.id} className="block space-y-1">
+            <FieldLabel>{fieldName(attribute.name)} — число{attribute.units ? ` (${attribute.units})` : ''}</FieldLabel>
+            <TextInput
+              type="number"
+              inputMode="decimal"
+              min={attribute.minValue}
+              max={attribute.maxValue}
+              step={10 ** -attribute.precision}
+              value={selection.numericAttributes[attribute.id] ?? ''}
+              disabled={disabled}
+              placeholder={`${attribute.minValue}–${attribute.maxValue}`}
+              onChange={(event) => {
+                const numericAttributes = { ...selection.numericAttributes };
+                if (event.target.value === '') delete numericAttributes[attribute.id];
+                else numericAttributes[attribute.id] = Number(event.target.value);
+                onChange({ ...selection, numericAttributes });
+              }}
+            />
+            {attribute.units === 'K' ? (
+              <span className="block text-[10px] text-ink-4">Укажите значение в тысячах: 1 = 1 000</span>
+            ) : null}
           </label>
         ))}
       </div>

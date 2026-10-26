@@ -24,6 +24,7 @@ import {
 } from '../config/marketplaces.js';
 import { translateGameTitle } from '../localization/games.js';
 import { calculateSaleFinancials } from '../sales/financials.js';
+import { soldOfferIdsFromOrders, syncLocalEldoradoSaleStatuses } from '../sales/sync-local-statuses.js';
 
 const optionalField = (max: number) => z.string().max(max).optional();
 
@@ -42,6 +43,7 @@ const publishSchema = z.object({
   accountPassword: z.string().min(1).max(500),
   tradeEnvironmentId: z.string().max(100).nullable().optional(),
   offerAttributes: z.record(z.string(), z.string().max(100)).optional(),
+  numericAttributes: z.record(z.string(), z.number().finite()).optional(),
   emailProviderUrl: optionalField(1_000),
   emailLogin: optionalField(500),
   emailPassword: optionalField(500),
@@ -178,6 +180,11 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
 
   app.get('/api/destinations/eldorado/listings', async (request) => {
     const eldoradoClient = await eldoradoClientForUser(request.user!.id);
+    try {
+      await syncLocalEldoradoSaleStatuses(request.user!.id);
+    } catch (error) {
+      request.log.warn({ err: error }, 'Не удалось обновить статусы продаж Eldorado');
+    }
     const rows = await prisma.marketplaceListing.findMany({
       where: { marketplace: 'eldorado', item: { userId: request.user!.id } },
       include: { item: { include: { listing: true } } },
@@ -204,6 +211,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
         source: 'gamestock' as const,
         externalListingId: row.externalId,
         url: row.externalId && game ? eldoradoOfferUrl(game.seoAlias, row.externalId) : null,
+        sourceUrl: row.item.listing.url,
         sellPrice: { amount: row.sellMinor / 100, currency: row.currency },
         purchasePrice: {
           amount: row.purchaseMinor / 100,
@@ -251,6 +259,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
           source: 'eldorado' as const,
           externalListingId: offer.id,
           url: game ? eldoradoOfferUrl(game.seoAlias, offer.id) : null,
+          sourceUrl: null,
           sellPrice: offer.price,
           purchasePrice: null,
           expectedProfit: null,
@@ -294,7 +303,6 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
       await Promise.all(
         orders.map(async (order) => {
           const status = saleState(order.state);
-          const local = localByOfferId.get(order.offerId);
           const totalMinor = Math.round(order.totalPrice.amount * 100);
           const actualFee = order.fee?.currency === order.totalPrice.currency
             ? Math.round(order.fee.amount * 100)
@@ -329,26 +337,27 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
               remoteStateChangedAt: order.stateChangedAt ? new Date(order.stateChangedAt) : null,
             },
           });
-          if (local) {
-            const settled = status === 'completed' || status === 'pending_payout';
-            const listingStatus = settled ? 'sold' : status;
-            await prisma.$transaction([
-              prisma.marketplaceListing.update({
-                where: { id: local.id },
-                data: { status: listingStatus, error: null },
-              }),
-              ...(settled
-                ? [
-                    prisma.inventoryItem.update({
-                      where: { id: local.itemId },
-                      data: { status: 'sold' },
-                    }),
-                  ]
-                : []),
-            ]);
-          }
         }),
       );
+
+      // Multiple orders may reference the same offer (for example, one canceled
+      // and one completed). Resolve the offer once so parallel writes cannot
+      // randomly replace a confirmed sale with a canceled order's state.
+      const soldListings = [...soldOfferIdsFromOrders(orders)]
+        .map((offerId) => localByOfferId.get(offerId))
+        .filter((listing): listing is NonNullable<typeof listing> => Boolean(listing));
+      if (soldListings.length > 0) {
+        await prisma.$transaction([
+          prisma.marketplaceListing.updateMany({
+            where: { id: { in: soldListings.map((listing) => listing.id) } },
+            data: { status: 'sold', error: null },
+          }),
+          prisma.inventoryItem.updateMany({
+            where: { id: { in: soldListings.map((listing) => listing.itemId) }, userId: request.user!.id },
+            data: { status: 'sold' },
+          }),
+        ]);
+      }
 
       const items = orders.flatMap((order) => {
         const gameId = internalGameId(order.gameId);

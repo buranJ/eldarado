@@ -1,93 +1,11 @@
-import type { PrefilterConfig, PrefilterVerdict } from '@gamestock/domain';
+import type { PrefilterVerdict } from '@gamestock/domain';
 import type { RawOffer } from '../adapters/source/types.js';
-import { checkSanity } from '../config/sanity.js';
-import { convertMinor } from '../config/marketplaces.js';
 
-/**
- * Rule gate that runs before any AI call. Reasons are accumulated rather than
- * short-circuited so the operator can see every problem with a listing at once.
- */
-export const prefilter = (
-  offer: RawOffer,
-  config: PrefilterConfig,
-  gameId: string,
-): PrefilterVerdict => {
-  const reasons: string[] = [];
-  const { seller, gameData } = offer;
-
-  // Implausible attributes mean the listing cannot be trusted as data at all.
-  for (const violation of checkSanity(gameId, gameData).violations) {
-    reasons.push(`недостоверная характеристика — ${violation}`);
-  }
-
-  if (seller.rating === null) {
-    if (!config.allowUnknownSellerRating) reasons.push('у продавца нет рейтинга');
-  } else if (seller.rating < config.minSellerRating) {
-    reasons.push(`рейтинг продавца ${seller.rating}★ < ${config.minSellerRating}★`);
-  }
-
-  if (seller.reviewsCount < config.minSellerReviews) {
-    reasons.push(`отзывов ${seller.reviewsCount} < ${config.minSellerReviews}`);
-  }
-
-  if (seller.accountAgeMonths === null) {
-    if (!config.allowUnknownSellerAge) reasons.push('неизвестен возраст аккаунта продавца');
-  } else if (seller.accountAgeMonths < config.minSellerAgeMonths) {
-    reasons.push(
-      `продавец на площадке ${seller.accountAgeMonths} мес. < ${config.minSellerAgeMonths} мес.`,
-    );
-  }
-
-  // FunPay localizes prices according to the server region. Apply the same
-  // operational FX table used by resale calculations before comparing a
-  // listing with game thresholds, while keeping the original source price.
-  const price =
-    convertMinor(offer.price.minor, offer.price.currency, config.priceCurrency) / 100;
-  if (price < config.minPrice) {
-    reasons.push(`цена ${price.toFixed(0)} < ${config.minPrice}`);
-  } else if (price > config.maxPrice) {
-    reasons.push(`цена ${price.toFixed(0)} > ${config.maxPrice}`);
-  }
-
-  const trophies = gameData.trophies as number | null;
-  if (config.minTrophies !== undefined) {
-    if (trophies === null || trophies === undefined) {
-      reasons.push('не указаны кубки');
-    } else if (trophies < config.minTrophies) {
-      reasons.push(`кубков ${trophies} < ${config.minTrophies}`);
-    }
-  }
-
-  const cards = gameData.unlockedCards as number | null;
-  if (config.minCards !== undefined) {
-    if (cards === null || cards === undefined) {
-      reasons.push('не указано число карт');
-    } else if (cards < config.minCards) {
-      reasons.push(`карт ${cards} < ${config.minCards}`);
-    }
-  }
-
-  const accountLevel = gameData.accountLevel as number | null;
-  if (config.minAccountLevel !== undefined) {
-    if (accountLevel === null || accountLevel === undefined) {
-      reasons.push('не указан уровень аккаунта');
-    } else if (accountLevel < config.minAccountLevel) {
-      reasons.push(`уровень аккаунта ${accountLevel} < ${config.minAccountLevel}`);
-    }
-  }
-
-  const townHallLevel = gameData.townHallLevel as number | null;
-  if (config.minTownHallLevel !== undefined) {
-    if (townHallLevel === null || townHallLevel === undefined) {
-      reasons.push('не указан уровень ратуши');
-    } else if (townHallLevel < config.minTownHallLevel) {
-      reasons.push(`ратуша ${townHallLevel} < ${config.minTownHallLevel}`);
-    }
-  }
-
-  if (config.requireAutoDelivery && !offer.autoDelivery) {
-    reasons.push('нет автовыдачи');
-  }
-
+/** Photos are checked after loading the source lot; this gate only checks reputation. */
+export const prefilter = (offer: RawOffer): PrefilterVerdict => {
+  const { rating, reviewsCount } = offer.seller;
+  const reasons = reviewsCount > 0 && rating !== null && rating < 4
+    ? [`рейтинг продавца ${rating}★ ниже 4★ при наличии отзывов`]
+    : [];
   return { passed: reasons.length === 0, reasons };
 };

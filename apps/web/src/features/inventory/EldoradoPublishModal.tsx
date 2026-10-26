@@ -61,6 +61,7 @@ export function EldoradoPublishModal({
   const [offerSelection, setOfferSelection] = useState<EldoradoOfferSelection>({
     tradeEnvironmentId: '',
     offerAttributes: {},
+    numericAttributes: {},
   });
   const [image, setImage] = useState<File | null>(null);
   const [replacementImageUrl, setReplacementImageUrl] = useState<string | null>(null);
@@ -138,6 +139,7 @@ export function EldoradoPublishModal({
         accountPassword,
         tradeEnvironmentId: offerSelection.tradeEnvironmentId || null,
         offerAttributes: offerSelection.offerAttributes,
+        numericAttributes: offerSelection.numericAttributes,
         termsAccepted: true,
         rulesAccepted: true,
       });

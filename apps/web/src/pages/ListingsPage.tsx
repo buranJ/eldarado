@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ExternalLink,
   ArrowUpRight,
   Megaphone,
   MoreHorizontal,
@@ -168,7 +169,17 @@ export function ListingsPage() {
             </div>
           </div>
         ) : (
-          <AccountCell id={row.accountId} title={row.title} gameId={row.gameId} />
+          <div className="flex min-w-0 items-center gap-2">
+            <AccountCell id={row.accountId} title={row.title} gameId={row.gameId} />
+            {row.sourceUrl ? (
+              <a href={row.sourceUrl} target="_blank" rel="noreferrer noopener"
+                onClick={(event) => event.stopPropagation()}
+                title="Открыть на FunPay" aria-label={`Открыть ${row.accountId} на FunPay`}
+                className="shrink-0 text-accent hover:text-ink">
+                <ExternalLink size={14} />
+              </a>
+            ) : null}
+          </div>
         ),
     },
     {
@@ -269,6 +280,12 @@ export function ListingsPage() {
         <div className="flex justify-end" onClick={(event) => event.stopPropagation()}>
           <DropdownMenu
             items={[
+              ...(row.sourceUrl ? [{
+                key: 'funpay',
+                label: 'Открыть на FunPay',
+                icon: ExternalLink,
+                onSelect: () => window.open(row.sourceUrl!, '_blank', 'noopener,noreferrer'),
+              }] : []),
               {
                 key: 'delete',
                 label: 'Удалить с Eldorado',

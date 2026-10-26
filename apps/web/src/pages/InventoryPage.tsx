@@ -240,7 +240,8 @@ export function InventoryPage() {
             href={row.url}
             target="_blank"
             rel="noreferrer noopener"
-            title="Открыть лот на площадке-источнике"
+            title="Открыть на FunPay"
+            aria-label="Открыть на FunPay"
             className="inline-flex size-6 items-center justify-center rounded-md border border-line bg-panel-2 text-ink-3 transition-colors hover:border-line-2 hover:text-ink"
           >
             <ExternalLink size={12} />

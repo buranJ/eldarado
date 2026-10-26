@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, Eye, ShoppingCart, Trophy, X, Zap } from 'lucide-react';
+import { Check, ExternalLink, Eye, ShoppingCart, Trophy, X, Zap } from 'lucide-react';
 import { PageHeader, MetaItem } from '@/components/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { Badge } from '@/components/ui/Badge';
@@ -245,10 +245,15 @@ export function TopAccountsPage() {
     {
       key: 'actions',
       header: '',
-      width: 148,
+      width: 160,
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+          <a href={row.source.url} target="_blank" rel="noreferrer noopener"
+            title="Открыть на FunPay" aria-label="Открыть на FunPay"
+            className="inline-flex size-7 items-center justify-center rounded-md text-accent hover:bg-panel-2">
+            <ExternalLink size={15} />
+          </a>
           <IconButton
             icon={Eye}
             size="sm"
@@ -376,7 +381,7 @@ export function TopAccountsPage() {
           onRowClick={(row) => setDrawerAccount(row)}
           selectedKey={drawerAccount?.id ?? null}
           loading={qualified.loading}
-          minWidth={1102}
+          minWidth={1115}
           empty={
             <EmptyState
               icon={Trophy}

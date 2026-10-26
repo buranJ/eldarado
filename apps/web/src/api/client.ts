@@ -124,6 +124,14 @@ export interface EldoradoPublishPreview {
     name: string;
     values: Array<{ id: string; name: string }>;
   }>;
+  requiredNumericAttributes: Array<{
+    id: string;
+    name: string;
+    minValue: number;
+    maxValue: number;
+    precision: number;
+    units: string | null;
+  }>;
   tradeEnvironments: Array<{ id: string; name: string; value: string }>;
   defaultTradeEnvironmentId: string | null;
 }
@@ -139,6 +147,7 @@ export interface EldoradoPublishInput {
   accountPassword: string;
   tradeEnvironmentId?: string | null;
   offerAttributes?: Record<string, string>;
+  numericAttributes?: Record<string, number>;
   emailProviderUrl?: string;
   emailLogin?: string;
   emailPassword?: string;

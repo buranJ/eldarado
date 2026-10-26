@@ -31,6 +31,7 @@ interface BulkEntry {
 const emptySelection = (): EldoradoOfferSelection => ({
   tradeEnvironmentId: '',
   offerAttributes: {},
+  numericAttributes: {},
 });
 
 const statusIcon = (status: EntryStatus) => {
@@ -164,6 +165,7 @@ export function EldoradoBulkPublishModal({
           accountPassword: credentials.password,
           tradeEnvironmentId: entry.selection.tradeEnvironmentId || null,
           offerAttributes: entry.selection.offerAttributes,
+          numericAttributes: entry.selection.numericAttributes,
           termsAccepted: true,
           rulesAccepted: true,
         });

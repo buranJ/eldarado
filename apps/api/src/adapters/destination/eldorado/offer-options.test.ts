@@ -7,6 +7,7 @@ import {
 } from './offer-options.js';
 
 const mobileLegendsOptions: AccountOfferOptions = {
+  requiredNumericAttributes: [],
   tradeEnvironments: [
     { id: '0', name: 'Device', value: 'Android' },
     { id: '1', name: 'Device', value: 'iOS' },
@@ -71,6 +72,7 @@ test('sends selected region in the same shape as the Eldorado seller form', () =
 
 test('validates every required attribute and preserves a configured default region', () => {
   const options: AccountOfferOptions = {
+    requiredNumericAttributes: [],
     tradeEnvironments: [{ id: '0', name: 'Region', value: 'Global' }],
     requiredAttributes: [
       { id: 'rank', name: 'Rank', values: [{ id: 'bronze', name: 'Bronze' }] },
@@ -91,5 +93,22 @@ test('validates every required attribute and preserves a configured default regi
       { id: 'rank', type: 'Select', values: ['bronze'] },
       { id: 'skins', type: 'Select', values: ['many'] },
     ],
+  });
+});
+
+test('requires numeric game attributes and sends the Eldorado numeric payload', () => {
+  const options: AccountOfferOptions = {
+    tradeEnvironments: [],
+    requiredAttributes: [],
+    requiredNumericAttributes: [{
+      id: 'gems', name: 'Gems', minValue: 0, maxValue: 250_000, precision: 1, units: null,
+    }],
+  };
+  assert.throws(() => resolveAccountOfferSelection(options, {}), /Укажите Gems/);
+  assert.throws(() => resolveAccountOfferSelection(options, { numericAttributes: { gems: -1 } }), /Укажите Gems/);
+  assert.throws(() => resolveAccountOfferSelection(options, { numericAttributes: { gems: 1.23 } }), /Укажите Gems/);
+  assert.deepEqual(resolveAccountOfferSelection(options, { numericAttributes: { gems: 0 } }), {
+    tradeEnvironmentId: null,
+    offerAttributes: [{ id: 'gems', name: 'Gems', type: 'Numeric', display: 'Value', units: null, value: 0 }],
   });
 });

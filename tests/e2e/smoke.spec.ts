@@ -11,12 +11,16 @@ interface MockOfferOptions {
     name: string;
     values: Array<{ id: string; name: string }>;
   }>;
+  requiredNumericAttributes: Array<{
+    id: string; name: string; minValue: number; maxValue: number; precision: number; units: string | null;
+  }>;
   tradeEnvironments: Array<{ id: string; name: string; value: string }>;
   defaultTradeEnvironmentId: string | null;
 }
 
 const emptyOfferOptions: MockOfferOptions = {
   requiredAttributes: [],
+  requiredNumericAttributes: [],
   tradeEnvironments: [],
   defaultTradeEnvironmentId: null,
 };
@@ -235,12 +239,16 @@ const requiredSelect = (id: string, name: string, valueId: string, valueName: st
   name,
   values: [{ id: valueId, name: valueName }],
 });
+const requiredNumeric = (id: string, name: string) => ({
+  id, name, minValue: 0, maxValue: 250_000, precision: 0, units: null,
+});
 
 const newGameCases: Array<{ gameId: string; options: MockOfferOptions }> = [
   {
     gameId: 'honkai-impact-3rd',
     options: {
       requiredAttributes: [],
+      requiredNumericAttributes: [],
       tradeEnvironments: [{ id: '0', name: 'Region', value: 'EU' }],
       defaultTradeEnvironmentId: null,
     },
@@ -253,6 +261,11 @@ const newGameCases: Array<{ gameId: string; options: MockOfferOptions }> = [
         requiredSelect('rust-hours', 'Hours Played', 'hours-099', '0-99'),
         requiredSelect('rust-skins', 'Skins', 'skins-014', '0-14'),
         requiredSelect('steam-account-level', 'Steam Account Level', 'level-05', '0-5'),
+      ],
+      requiredNumericAttributes: [
+        requiredNumeric('rust-hours-played-numeric', 'Hours Played'),
+        requiredNumeric('rust-skins-count-numeric', 'Skins'),
+        requiredNumeric('rust-steam-account-level-numeric', 'Steam Account Level'),
       ],
       tradeEnvironments: [{ id: '0', name: 'Device', value: 'PC' }],
       defaultTradeEnvironmentId: null,
@@ -270,6 +283,12 @@ const newGameCases: Array<{ gameId: string; options: MockOfferOptions }> = [
         requiredSelect('lol-current-rank', 'Current Rank', 'bronze', 'Bronze'),
         requiredSelect('lol-skins', 'Skins', '0-skins', '0 Skins'),
       ],
+      requiredNumericAttributes: [
+        requiredNumeric('league-of-legends-blue-essence-numeric', 'Blue Essence'),
+        requiredNumeric('league-of-legends-champion-count-numeric', 'Champion Count'),
+        requiredNumeric('league-of-legends-riot-points-numeric', 'Riot Points'),
+        requiredNumeric('league-of-legends-skins-numeric', 'Skins'),
+      ],
       tradeEnvironments: [{ id: '2', name: 'Server', value: 'Europe West' }],
       defaultTradeEnvironmentId: null,
     },
@@ -280,6 +299,7 @@ const newGameCases: Array<{ gameId: string; options: MockOfferOptions }> = [
       requiredAttributes: [
         requiredSelect('mobile-legends-region', 'Region', 'region-global', 'Global'),
       ],
+      requiredNumericAttributes: [],
       tradeEnvironments: [{ id: '0', name: 'Device', value: 'Android' }],
       defaultTradeEnvironmentId: null,
     },
@@ -292,6 +312,10 @@ const newGameCases: Array<{ gameId: string; options: MockOfferOptions }> = [
         requiredSelect('clash-of-clans-maxed-account', 'Maxed Account', 'maxed-yes', 'Yes'),
         requiredSelect('clash-of-clans-town-hall', 'Town Hall', 'hall-13', '1-3'),
         requiredSelect('coc-gems', 'Gems', 'gems-0499', '0-499'),
+      ],
+      requiredNumericAttributes: [
+        requiredNumeric('clash-of-clans-gems-numeric', 'Gems'),
+        requiredNumeric('clash-of-clans-town-hall-numeric', 'Town Hall'),
       ],
       tradeEnvironments: [],
       defaultTradeEnvironmentId: null,
@@ -340,6 +364,11 @@ for (const { gameId, options } of newGameCases) {
     for (let index = 0; index < expectedSelectCount; index += 1) {
       await selects.nth(index).selectOption({ index: 1 });
     }
+    const numericInputs = dialog.locator('input[type="number"]');
+    await expect(numericInputs).toHaveCount(options.requiredNumericAttributes.length);
+    for (let index = 0; index < options.requiredNumericAttributes.length; index += 1) {
+      await numericInputs.nth(index).fill('1');
+    }
 
     await dialog.getByRole('button', { name: 'Опубликовать 1' }).click();
     await expect(dialog.getByText('Опубликовано:')).toBeVisible();
@@ -347,10 +376,14 @@ for (const { gameId, options } of newGameCases) {
     const input = JSON.parse(api.publishRequests[0]) as {
       tradeEnvironmentId: string | null;
       offerAttributes: Record<string, string>;
+      numericAttributes: Record<string, number>;
     };
     expect(input.tradeEnvironmentId).toBe(options.tradeEnvironments[0]?.id ?? null);
     for (const attribute of options.requiredAttributes) {
       expect(input.offerAttributes[attribute.id]).toBe(attribute.values[0].id);
+    }
+    for (const attribute of options.requiredNumericAttributes) {
+      expect(input.numericAttributes[attribute.id]).toBe(1);
     }
   });
 }

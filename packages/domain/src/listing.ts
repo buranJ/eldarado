@@ -23,6 +23,8 @@ export interface MarketplaceListing {
   /** ID assigned by the destination marketplace once published. */
   externalListingId: string | null;
   url?: string | null;
+  /** Original FunPay listing, when the offer was created from a sourced account. */
+  sourceUrl?: string | null;
   sellPrice: Money | null;
   purchasePrice: Money | null;
   expectedProfit: Money | null;

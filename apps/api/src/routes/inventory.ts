@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { logActivity } from '../pipeline/activity.js';
 import { DESTINATION_FEE_RATE, recommendedResaleMinor } from '../config/marketplaces.js';
+import { syncLocalEldoradoSaleStatuses } from '../sales/sync-local-statuses.js';
 
 const money = (minor: number, currency: string) => ({
   amount: minor / 100,
@@ -73,6 +74,11 @@ const statusSchema = z.object({
 export const registerInventoryRoutes = (app: FastifyInstance): void => {
   app.get('/api/inventory', async (request) => {
     const { gameId = 'clash-royale', status } = request.query as Record<string, string>;
+    try {
+      await syncLocalEldoradoSaleStatuses(request.user!.id);
+    } catch (error) {
+      request.log.warn({ err: error }, 'Не удалось обновить статусы продаж Eldorado');
+    }
     const rows = await loadItems(gameId, request.user!.id, status);
     const items = rows.map(toApiItem);
 

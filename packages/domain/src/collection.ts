@@ -25,28 +25,6 @@ export interface CollectionRun {
   error: string | null;
 }
 
-/**
- * Cheap rule-based gate that runs before any AI call. Everything it needs comes
- * from the source category page, so rejecting a listing here costs nothing.
- */
-export interface PrefilterConfig {
-  minSellerRating: number;
-  minSellerReviews: number;
-  minSellerAgeMonths: number;
-  /** Missing public reputation data is left for the later AI/manual risk stage. */
-  allowUnknownSellerRating: boolean;
-  allowUnknownSellerAge: boolean;
-  minPrice: number;
-  maxPrice: number;
-  priceCurrency: string;
-  /** Game-specific thresholds are omitted for games that do not expose them. */
-  minTrophies?: number;
-  minCards?: number;
-  minAccountLevel?: number;
-  minTownHallLevel?: number;
-  requireAutoDelivery: boolean;
-}
-
 export interface PrefilterVerdict {
   passed: boolean;
   /** Human-readable reasons a listing was rejected, in rule order. */
