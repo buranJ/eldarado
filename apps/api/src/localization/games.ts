@@ -383,6 +383,46 @@ const CLASH_OF_CLANS_RULES: readonly TranslationRule[] = [
   [/раб(?:а|ы)/giu, 'builders'],
 ];
 
+/** New categories start with conservative terms; unknown Cyrillic is not invented in English. */
+const NEW_GAME_NAMES: Record<string, string> = {
+  'zenless-zone-zero': 'Zenless Zone Zero',
+  'wuthering-waves': 'Wuthering Waves',
+  'world-of-warships': 'World of Warships',
+  'wow-mists-of-pandaria-classic': 'World of Warcraft Mists of Pandaria Classic',
+  'world-of-warcraft': 'World of Warcraft',
+  'world-of-tanks': 'World of Tanks',
+  'whiteout-survival': 'Whiteout Survival',
+  'where-winds-meet': 'Where Winds Meet',
+  'watcher-of-realms': 'Watcher of Realms',
+  warframe: 'Warframe',
+  wardogs: 'WARDOGS',
+  'war-thunder': 'War Thunder',
+  '8-ball-pool': '8 Ball Pool',
+  'afk-journey': 'AFK Journey',
+  'albion-online': 'Albion Online',
+  'arc-raiders': 'ARC Raiders',
+  aniimo: 'Aniimo',
+  'arena-breakout': 'Arena Breakout',
+  'apex-legends': 'Apex Legends',
+  'black-desert-online': 'Black Desert Online',
+};
+
+const NEW_GAME_RULES: readonly TranslationRule[] = [
+  [/европ(?:а|ы)|(?<!\p{L})eu(?!\p{L})/giu, 'Europe'],
+  [/америк(?:а|и)|(?<!\p{L})us(?!\p{L})/giu, 'America'],
+  [/ази(?:я|и)/giu, 'Asia'],
+  [/глобал(?:ьный|ьная|ьное)?/giu, 'Global'],
+  [/сервер/giu, 'server'],
+  [/уров(?:ень|ня)|лвл/giu, 'level'],
+  [/скин(?:ы|ов|а)?|облик(?:и|ов)?/giu, 'skins'],
+  [/персонаж(?:и|ей|а)?|геро(?:и|ев|я)/giu, 'characters'],
+  [/танк(?:и|ов|а)?/giu, 'tanks'],
+  [/корабл(?:и|ей|ь)/giu, 'ships'],
+  [/ранг/giu, 'rank'],
+  [/прокачк(?:а|и)|прокачан(?:ный|ная)?/giu, 'progressed'],
+  [/премиум|премиальн(?:ый|ые)/giu, 'premium'],
+];
+
 const translate = (source: string, rules: readonly TranslationRule[], fallback: string): string =>
   translateWithRules(source, [...rules, ...COMMON_ACCOUNT_RULES], fallback);
 
@@ -406,7 +446,10 @@ const rulesForGame = (gameId: string): readonly TranslationRule[] | null => {
 
 export const findUntranslatedGameTerms = (gameId: string, source: string): string[] => {
   const rules = rulesForGame(gameId);
-  return rules ? untranslatedCyrillicTerms(source, [...rules, ...COMMON_ACCOUNT_RULES]) : [];
+  if (rules) return untranslatedCyrillicTerms(source, [...rules, ...COMMON_ACCOUNT_RULES]);
+  return NEW_GAME_NAMES[gameId]
+    ? untranslatedCyrillicTerms(source, [...NEW_GAME_RULES, ...COMMON_ACCOUNT_RULES])
+    : [];
 };
 
 export const translateGameTitle = (gameId: string, source: string): string => {
@@ -436,6 +479,8 @@ export const translateGameTitle = (gameId: string, source: string): string => {
     case 'clash-of-clans':
       return translate(source, CLASH_OF_CLANS_RULES, 'Clash of Clans account');
     default:
-      return source;
+      return NEW_GAME_NAMES[gameId]
+        ? translate(source, NEW_GAME_RULES, `${NEW_GAME_NAMES[gameId]} account`)
+        : source;
   }
 };

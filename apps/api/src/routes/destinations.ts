@@ -11,12 +11,14 @@ import {
 import type { EldoradoOfferImage } from '../adapters/destination/eldorado/account-offer.js';
 import {
   loadAccountOfferOptions,
+  inferTradeEnvironmentId,
   resolveAccountOfferSelection,
 } from '../adapters/destination/eldorado/offer-options.js';
 import { buildDraft } from '../adapters/destination/draft.js';
 import { ExtractionSchema, toAttributeMap } from '../analysis/schema.js';
 import { prisma } from '../lib/db.js';
 import { sourceImagePath } from '../lib/source-images.js';
+import { gamePosterPath, gamePosterUrl } from '../lib/game-posters.js';
 import {
   convertMinor,
   DESTINATION_FEE_RATE,
@@ -116,6 +118,26 @@ const INTERNAL_GAME_IDS: Record<string, string> = {
   '17': 'league-of-legends',
   '55': 'mobile-legends',
   '18': 'clash-of-clans',
+  '194': 'zenless-zone-zero',
+  '190': 'wuthering-waves',
+  '330': 'world-of-warships',
+  '14': 'wow-mists-of-pandaria-classic',
+  '0': 'world-of-warcraft',
+  '240': 'world-of-tanks',
+  '208': 'whiteout-survival',
+  '323': 'where-winds-meet',
+  '325': 'watcher-of-realms',
+  '11': 'warframe',
+  '474': 'wardogs',
+  '80': 'war-thunder',
+  '77': '8-ball-pool',
+  '426': 'afk-journey',
+  '41': 'albion-online',
+  '319': 'arc-raiders',
+  '478': 'aniimo',
+  '321': 'arena-breakout',
+  '33': 'apex-legends',
+  '24': 'black-desert-online',
 };
 
 const GAME_LABELS: Record<string, string> = {
@@ -131,6 +153,26 @@ const GAME_LABELS: Record<string, string> = {
   'league-of-legends': 'League of Legends',
   'mobile-legends': 'Mobile Legends',
   'clash-of-clans': 'Clash of Clans',
+  'zenless-zone-zero': 'Zenless Zone Zero',
+  'wuthering-waves': 'Wuthering Waves',
+  'world-of-warships': 'World of Warships',
+  'wow-mists-of-pandaria-classic': 'World of Warcraft Mists of Pandaria Classic',
+  'world-of-warcraft': 'World of Warcraft',
+  'world-of-tanks': 'World of Tanks',
+  'whiteout-survival': 'Whiteout Survival',
+  'where-winds-meet': 'Where Winds Meet',
+  'watcher-of-realms': 'Watcher of Realms',
+  warframe: 'Warframe',
+  wardogs: 'WARDOGS',
+  'war-thunder': 'War Thunder',
+  '8-ball-pool': '8 Ball Pool',
+  'afk-journey': 'AFK Journey',
+  'albion-online': 'Albion Online',
+  'arc-raiders': 'ARC Raiders',
+  aniimo: 'Aniimo',
+  'arena-breakout': 'Arena Breakout',
+  'apex-legends': 'Apex Legends',
+  'black-desert-online': 'Black Desert Online',
 };
 
 const internalGameId = (eldoradoGameId: string): string =>
@@ -149,7 +191,7 @@ const draftFor = (item: InventoryItem) => {
   const storedTitle =
     typeof sourceAttributes.titleEn === 'string' ? sourceAttributes.titleEn.trim() : '';
   const sellerSummary = storedTitle || translateGameTitle(item.gameId, item.listing.sellerTitle);
-  return buildDraft({
+  const draft = buildDraft({
     gameName: GAME_LABELS[item.gameId] ?? item.gameId,
     sellerSummary,
     sellMinor: item.manualMinor ?? recommendedResaleMinor(item),
@@ -157,6 +199,10 @@ const draftFor = (item: InventoryItem) => {
     attributes,
     autoDelivery: true,
   });
+  if (item.listing.images.length === 0 && gamePosterPath(item.gameId)) {
+    draft.description += '\n\nCover image is an illustration, not a screenshot of this account.';
+  }
+  return draft;
 };
 
 const parseImage = (dataUrl: string): { bytes: Buffer; mimeType: string } => {
@@ -170,6 +216,13 @@ const parseImage = (dataUrl: string): { bytes: Buffer; mimeType: string } => {
 };
 
 export const registerDestinationRoutes = (app: FastifyInstance): void => {
+  app.get('/api/game-posters/:gameId', async (request, reply) => {
+    const { gameId } = request.params as { gameId: string };
+    const path = gamePosterPath(gameId);
+    if (!path) return reply.code(404).send({ error: 'Постер игры не найден' });
+    return reply.type('image/jpeg').header('Cache-Control', 'private, max-age=86400').send(await readFile(path));
+  });
+
   app.get('/api/destinations/eldorado/status', async (request) => {
     const client = await eldoradoClientForUser(request.user!.id);
     return {
@@ -450,17 +503,22 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
     try {
       const options = await loadAccountOfferOptions(game.gameId);
       const draft = draftFor(item);
+      const fallbackPoster = item.listing.images.length === 0 ? gamePosterUrl(item.gameId) : null;
       return {
         title: draft.title,
         description: draft.description,
         gameId: game.gameId,
         currency: 'USD',
         automaticDelivery: true,
-        sourceImageUrls: item.listing.images.map(
-          (image) => `/api/listings/${item.listing.id}/images/${image.position}`,
-        ),
+        sourceImageUrls: fallbackPoster
+          ? [fallbackPoster]
+          : item.listing.images.map(
+              (image) => `/api/listings/${item.listing.id}/images/${image.position}`,
+            ),
+        fallbackPoster: Boolean(fallbackPoster),
         ...options,
-        defaultTradeEnvironmentId: game.tradeEnvironmentId ?? null,
+        defaultTradeEnvironmentId:
+          game.tradeEnvironmentId ?? inferTradeEnvironmentId(options, item.listing.gameData),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -502,7 +560,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
         const selection = resolveAccountOfferSelection(
           offerOptions,
           input,
-          game.tradeEnvironmentId,
+          game.tradeEnvironmentId ?? inferTradeEnvironmentId(offerOptions, item.listing.gameData) ?? undefined,
         );
         const storedImages = item.listing.images.slice(0, 4);
         const imageInputs: Array<{ bytes: Buffer; mimeType: string; fileName: string }> = await Promise.all(
@@ -520,19 +578,36 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
           };
         }
         if (imageInputs.length === 0) {
+          const path = gamePosterPath(item.gameId);
+          if (path) {
+            imageInputs.push({
+              bytes: await readFile(path),
+              mimeType: 'image/jpeg',
+              fileName: `${item.gameId}-illustrative-poster.jpg`,
+            });
+          }
+        }
+        if (imageInputs.length === 0) {
           return reply.code(422).send({ error: 'У позиции нет сохранённого фото аккаунта' });
         }
+        const usesPoster = storedImages.length === 0 && !input.imageDataUrl;
         const uploadedImages: EldoradoOfferImage[] = [];
         for (const imageInput of imageInputs) {
           uploadedImages.push(await eldoradoClient.uploadAccountImage(imageInput));
         }
         const draft = draftFor(item);
+        const posterNote = 'Cover image is an illustration, not a screenshot of this account.';
+        const description = usesPoster && !input.description.includes(posterNote)
+          ? `${input.description.trim().slice(0, 2_000 - posterNote.length - 2)}\n\n${posterNote}`.trim()
+          : !usesPoster && storedImages.length === 0
+            ? input.description.replace(`\n\n${posterNote}`, '').replace(posterNote, '').trim()
+            : input.description;
         const payload = buildAccountOfferPayload(
           game.gameId,
           draft,
           {
             title: input.title,
-            description: input.description,
+            description,
             priceUsd: input.priceUsd,
             hasOriginalEmail: input.hasOriginalEmail,
             credentials: {

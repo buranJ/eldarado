@@ -2,9 +2,25 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildAccountOfferPayload } from './account-offer.js';
 import {
+  inferTradeEnvironmentId,
   resolveAccountOfferSelection,
   type AccountOfferOptions,
 } from './offer-options.js';
+
+test('infers only explicit source region or device, never invents one', () => {
+  const options: AccountOfferOptions = {
+    requiredAttributes: [], requiredNumericAttributes: [],
+    tradeEnvironments: [
+      { id: '0', name: 'Region', value: 'NA' },
+      { id: '1', name: 'Region', value: 'EU' },
+    ],
+  };
+  assert.equal(inferTradeEnvironmentId(options, { region: 'europe' }), '1');
+  assert.equal(inferTradeEnvironmentId(options, { region: 'unknown' }), null);
+  assert.equal(inferTradeEnvironmentId(options, {}), null);
+  const deviceOptions = { ...options, tradeEnvironments: [{ id: '2', name: 'Device', value: 'PC' }] };
+  assert.equal(inferTradeEnvironmentId(deviceOptions, { region: '313', platform: 'pc' }), '2');
+});
 
 const mobileLegendsOptions: AccountOfferOptions = {
   requiredNumericAttributes: [],

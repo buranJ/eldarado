@@ -119,6 +119,7 @@ export interface EldoradoPublishPreview {
   currency: 'USD';
   automaticDelivery: true;
   sourceImageUrls: string[];
+  fallbackPoster: boolean;
   requiredAttributes: Array<{
     id: string;
     name: string;

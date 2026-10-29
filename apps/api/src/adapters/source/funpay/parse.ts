@@ -233,6 +233,9 @@ const gameDataFor = (
       };
     default:
       return {
+        titleEn,
+        region: attrs.region ?? attrs.server ?? null,
+        platform: attrs.platform ?? null,
         arena: toInt(attrs.arena),
         accountLevel: toInt(attrs.level),
         trophies: toInt(attrs.cup),
@@ -240,7 +243,6 @@ const gameDataFor = (
         legendaryCards: toInt(attrs.legcard),
         nameChangeAvailable:
           attrs.namechange === undefined ? null : /да|есть/i.test(attrs.namechange),
-        ...(gameId === 'clash-royale' ? { titleEn } : {}),
       };
   }
 };
@@ -277,10 +279,14 @@ export const parseCategory = (html: string, gameId?: string): RawOffer[] => {
       hero: node.attr('data-f-hero'),
       skin: node.attr('data-f-skin'),
       winrate: node.attr('data-f-winrate'),
+      region: node.attr('data-f-region'),
+      platform: node.attr('data-f-platform') ?? (gameId === 'warframe'
+        ? node.find('.tc-server').first().text().trim().toLowerCase()
+        : undefined),
     };
 
     if (
-      ['rust', 'league-of-legends', 'mobile-legends'].includes(gameId ?? '') &&
+      ['rust', 'league-of-legends', 'mobile-legends', 'arc-raiders'].includes(gameId ?? '') &&
       attrs.type &&
       !/^(?:продажа|sale)$/iu.test(attrs.type)
     ) return;

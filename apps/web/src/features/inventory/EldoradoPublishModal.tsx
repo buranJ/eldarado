@@ -114,7 +114,7 @@ export function EldoradoPublishModal({
 
   const submit = async () => {
     setError(null);
-    if (!image && !preview?.sourceImageUrls.length) return setError('У позиции нет фото аккаунта');
+    if (!image && !preview?.sourceImageUrls.length) return setError('У позиции нет фото или постера');
     if (image && image.size > 10 * 1024 * 1024) return setError('Изображение должно быть не больше 10 МБ');
     const amount = Number(priceUsd.replace(',', '.'));
     if (!Number.isFinite(amount) || amount <= 0) return setError('Укажите цену в USD');
@@ -265,16 +265,16 @@ export function EldoradoPublishModal({
                   ]}
                 />
               </FormField>
-              <FormField label={`Фото аккаунта (${previewImageUrls.length})`}>
+              <FormField label={`${preview?.fallbackPoster && !image ? 'Иллюстративный постер' : 'Фото аккаунта'} (${previewImageUrls.length})`}>
                 {previewImageUrls[activeImageIndex] ? (
                   <div className="mb-2 overflow-hidden rounded-md border border-line-2 bg-panel-2">
                     <img
                       src={previewImageUrls[activeImageIndex]}
-                      alt={`Фото аккаунта ${activeImageIndex + 1}`}
+                      alt={preview?.fallbackPoster && !image ? 'Иллюстративный постер игры' : `Фото аккаунта ${activeImageIndex + 1}`}
                       className="h-36 w-full object-contain"
                     />
                     <p className="px-2 py-1 text-[10.5px] text-ink-3">
-                      Фото {activeImageIndex + 1} из {previewImageUrls.length}
+                      {preview?.fallbackPoster && !image ? 'Постер игры, не скриншот аккаунта' : `Фото ${activeImageIndex + 1} из ${previewImageUrls.length}`}
                       {activeImageIndex === 0 ? ' · основное' : ' · дополнительное'}
                     </p>
                   </div>
@@ -307,7 +307,9 @@ export function EldoradoPublishModal({
                   onChange={(e) => setImage(e.target.files?.[0] ?? null)}
                 />
                 <p className="mt-1 text-[10.5px] text-ink-4">
-                  Все фото отправятся в Eldorado. Выбранный файл заменит только основное.
+                  {preview?.fallbackPoster && !image
+                    ? 'У исходного лота нет фото. В Eldorado уйдёт только иллюстративный постер; вы можете заменить его реальным скриншотом аккаунта.'
+                    : 'Все фото отправятся в Eldorado. Выбранный файл заменит только основное.'}
                 </p>
               </FormField>
             </div>

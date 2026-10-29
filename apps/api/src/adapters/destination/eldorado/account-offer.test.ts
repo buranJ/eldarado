@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildAccountOfferPayload, ELDORADO_ACCOUNT_GAMES } from './account-offer.js';
+import { FUNPAY_CATEGORIES } from '../../source/funpay/config.js';
 
 test('builds the current Eldorado account offer payload without legacy secrets', () => {
   const payload = buildAccountOfferPayload(
@@ -85,6 +86,36 @@ test('maps the five new FunPay games to their Eldorado account categories', () =
   };
   for (const [gameId, eldoradoId] of Object.entries(expected)) {
     assert.equal(ELDORADO_ACCOUNT_GAMES[gameId]?.gameId, eldoradoId);
+  }
+});
+
+test('maps every game in the new onboarding list to both marketplaces', () => {
+  const expected: Record<string, [number, string]> = {
+    'zenless-zone-zero': [2408, '194'],
+    'wuthering-waves': [2390, '190'],
+    'world-of-warships': [158, '330'],
+    'wow-mists-of-pandaria-classic': [763, '14'],
+    'world-of-warcraft': [13, '0'],
+    'world-of-tanks': [77, '240'],
+    'whiteout-survival': [4567, '208'],
+    'where-winds-meet': [3902, '323'],
+    'watcher-of-realms': [1698, '325'],
+    warframe: [65, '11'],
+    wardogs: [4429, '474'],
+    'war-thunder': [242, '80'],
+    '8-ball-pool': [2139, '77'],
+    'afk-journey': [2287, '426'],
+    'albion-online': [47, '41'],
+    'arc-raiders': [3382, '319'],
+    aniimo: [3587, '478'],
+    'arena-breakout': [1650, '321'],
+    'apex-legends': [468, '33'],
+    'black-desert-online': [33, '24'],
+  };
+  for (const [gameId, [funpayId, eldoradoId]] of Object.entries(expected)) {
+    assert.equal(FUNPAY_CATEGORIES[gameId]?.lotId, funpayId);
+    assert.equal(ELDORADO_ACCOUNT_GAMES[gameId]?.gameId, eldoradoId);
+    assert.ok(ELDORADO_ACCOUNT_GAMES[gameId]?.seoAlias);
   }
 });
 

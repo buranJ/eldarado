@@ -6,6 +6,7 @@ import { funPayAdapter } from '../adapters/source/funpay/index.js';
 import type { RawOffer, SourceAdapter, SourceImage } from '../adapters/source/types.js';
 import { deleteSourceImages, saveSourceImage } from '../lib/source-images.js';
 import { recordTranslationObservations } from '../localization/observations.js';
+import { hasGamePoster } from '../lib/game-posters.js';
 
 const ADAPTERS: SourceAdapter[] = [funPayAdapter];
 
@@ -44,7 +45,7 @@ export interface CollectOptions {
   dryRun?: boolean;
   /** Verify unseen source offers and permanently remove stale source records. */
   pruneMissing?: boolean;
-  /** Stop after this many photo-qualified listings have been stored. */
+  /** Stop after this many eligible listings (with source photos or a fallback poster). */
   maxListings?: number;
 }
 
@@ -84,7 +85,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
 
     if (options.dryRun) {
       for (const offer of offers.slice(0, options.maxListings ?? offers.length)) {
-        if (prefilter(offer).passed) counters.passed += 1;
+        if (prefilter(offer, gameId).passed) counters.passed += 1;
         else counters.rejected += 1;
       }
     } else {
@@ -93,7 +94,7 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
 
       for (const offer of offers) {
         if (options.maxListings !== undefined && storedListings >= options.maxListings) break;
-        const verdict = prefilter(offer);
+        const verdict = prefilter(offer, gameId);
         const hash = hashOf(offer);
         const existing = await prisma.listing.findUnique({
           where: { marketplace_externalId: { marketplace, externalId: offer.externalId } },
@@ -120,7 +121,13 @@ export const collect = async (options: CollectOptions = {}): Promise<CollectionR
         }
 
         const hasImages = (downloadedImages?.length ?? existing?.images.length ?? 0) > 0;
-        if (!hasImages) {
+        if (!hasImages && imageCheckFailed) {
+          // A failed page request is not proof that a source lot has no photos.
+          if (existing) seenIds.push(offer.externalId);
+          counters.rejected += 1;
+          continue;
+        }
+        if (!hasImages && !hasGamePoster(gameId)) {
           counters.rejected += 1;
           if (
             existing &&

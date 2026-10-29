@@ -149,3 +149,18 @@ test('keeps sales and excludes rentals in categories that mix offer types', () =
   assert.equal(rust.gameData.offerType, 'продажа');
   assert.match(String(rust.gameData.titleEn), /Rust Steam.*email/i);
 });
+
+test('keeps ARC Raiders sales but excludes rentals, and reads new-game region', () => {
+  const rental = categoryOffer('data-f-type="аренда" data-f-platform="pc"', 'Аренда на 3 часа');
+  const sale = categoryOffer('data-f-type="продажа" data-f-platform="pc"', 'Аккаунт с экипировкой');
+  assert.equal(parseCategory(rental, 'arc-raiders').length, 0);
+  assert.equal(parseCategory(sale, 'arc-raiders').length, 1);
+
+  const [zenless] = parseCategory(categoryOffer(
+    'data-f-region="europe" data-f-platform="pc"',
+    'Европа, уровень 50, 4 персонажа',
+  ), 'zenless-zone-zero');
+  assert.equal(zenless.gameData.region, 'europe');
+  assert.equal(zenless.gameData.platform, 'pc');
+  assert.doesNotMatch(String(zenless.gameData.titleEn), /\p{Script=Cyrillic}/u);
+});

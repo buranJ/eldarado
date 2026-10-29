@@ -7,6 +7,29 @@ export type AppGame = Game & {
   collectionEnabled: boolean;
 };
 
+const ADDITIONAL_GAMES = [
+  ['zenless-zone-zero', 'Zenless Zone Zero', 'ZZ', '#c8a46d', '194'],
+  ['wuthering-waves', 'Wuthering Waves', 'WW', '#6eb7b0', '190'],
+  ['world-of-warships', 'World of Warships', 'WS', '#668db3', '330'],
+  ['wow-mists-of-pandaria-classic', 'WoW Mists of Pandaria Classic (RU)', 'MP', '#8bb86d', '14'],
+  ['world-of-warcraft', 'World of Warcraft', 'WK', '#c69d59', '0'],
+  ['world-of-tanks', 'World of Tanks', 'WT', '#a99673', '240'],
+  ['whiteout-survival', 'Whiteout Survival', 'WO', '#86b8d5', '208'],
+  ['where-winds-meet', 'Where Winds Meet', 'WM', '#aab98a', '323'],
+  ['watcher-of-realms', 'Watcher of Realms', 'WR', '#9a7eb2', '325'],
+  ['warframe', 'Warframe', 'WF', '#8296c8', '11'],
+  ['wardogs', 'WARDOGS', 'WD', '#aa8667', '474'],
+  ['war-thunder', 'War Thunder', 'TH', '#9da7ad', '80'],
+  ['8-ball-pool', '8 Ball Pool', '8B', '#75a7a8', '77'],
+  ['afk-journey', 'AFK Journey', 'AF', '#bc9bd2', '426'],
+  ['albion-online', 'Albion Online', 'AO', '#b5a078', '41'],
+  ['arc-raiders', 'ARC Raiders', 'AR', '#ba916a', '319'],
+  ['aniimo', 'Aniimo', 'AN', '#94bb94', '478'],
+  ['arena-breakout', 'Arena Breakout', 'AB', '#9ca78c', '321'],
+  ['apex-legends', 'Apex Legends', 'AP', '#ca7c72', '33'],
+  ['black-desert-online', 'Black Desert Online', 'BD', '#b8a78c', '24'],
+] as const;
+
 /** Games available in the workspace selector. */
 export const GAMES: AppGame[] = [
   {
@@ -195,6 +218,17 @@ export const GAMES: AppGame[] = [
     collectionEnabled: true,
     scoringModel: null,
   },
+  ...ADDITIONAL_GAMES.map(([id, name, monogram, accent, eldoradoGameId]): AppGame => ({
+    id,
+    name,
+    shortName: name,
+    status: 'active',
+    monogram,
+    accent,
+    eldoradoGameId,
+    collectionEnabled: true,
+    scoringModel: null,
+  })),
 ];
 
 export const DEFAULT_GAME_ID: GameId = 'clash-royale';

@@ -26,6 +26,32 @@ export interface AccountOfferSelection {
   numericAttributes?: Record<string, number>;
 }
 
+/** Only infer a destination region/device when FunPay gives an explicit value. */
+export const inferTradeEnvironmentId = (
+  options: AccountOfferOptions,
+  gameData: unknown,
+): string | null => {
+  if (!isRecord(gameData)) return null;
+  const sources = [gameData.region, gameData.platform]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  if (sources.length === 0) return null;
+  const normalize = (value: string): string => value.trim().toLowerCase().replace(/[^a-zа-яё]/giu, '');
+  const aliases: Record<string, string> = {
+    europe: 'eu', европа: 'eu', eu: 'eu',
+    america: 'na', americas: 'na', севернаяамерика: 'na', na: 'na', us: 'na',
+    asia: 'asia', азия: 'asia',
+    pc: 'pc', компьютер: 'pc',
+  };
+  for (const source of sources) {
+    const target = aliases[normalize(source)] ?? normalize(source);
+    const match = options.tradeEnvironments.find((option) =>
+      (aliases[normalize(option.value)] ?? normalize(option.value)) === target,
+    );
+    if (match) return match.id;
+  }
+  return null;
+};
+
 export type SelectedOfferAttribute =
   | { id: string; type: 'Select'; values: string[] }
   | { id: string; name: string; type: 'Numeric'; display: 'Value'; units: string | null; value: number };

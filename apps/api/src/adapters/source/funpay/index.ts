@@ -17,6 +17,19 @@ import {
 let lastRequestAt = 0;
 let requestQueue: Promise<void> = Promise.resolve();
 const REQUEST_TIMEOUT_MS = 30_000;
+const RATE_LIMIT_RETRIES = 3;
+
+const retryAfterMs = (response: Response, attempt: number): number => {
+  const header = response.headers.get('retry-after');
+  const seconds = header === null ? Number.NaN : Number(header);
+  const date = header === null ? Number.NaN : Date.parse(header);
+  const serverDelay = Number.isFinite(seconds)
+    ? seconds * 1_000
+    : Number.isFinite(date) ? date - Date.now() : Number.NaN;
+  return Math.max(5_000, Math.min(90_000,
+    Number.isFinite(serverDelay) ? serverDelay : 15_000 * (attempt + 1),
+  ));
+};
 
 const throttle = async (): Promise<void> => {
   const scheduled = requestQueue.then(async () => {
@@ -34,11 +47,16 @@ const fetchPublic = async (path: string): Promise<Response> => {
       `Путь ${path} не разрешён: доступны только категория и публичная страница лота`,
     );
   }
-  await throttle();
-  return fetch(`${FUNPAY_BASE}${path}`, {
-    headers: REQUEST_HEADERS,
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  for (let attempt = 0; attempt <= RATE_LIMIT_RETRIES; attempt += 1) {
+    await throttle();
+    const response = await fetch(`${FUNPAY_BASE}${path}`, {
+      headers: REQUEST_HEADERS,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    if (response.status !== 429 || attempt === RATE_LIMIT_RETRIES) return response;
+    await new Promise((resolve) => setTimeout(resolve, retryAfterMs(response, attempt)));
+  }
+  throw new Error('FunPay: исчерпаны повторы запроса');
 };
 
 const fetchPath = async (path: string): Promise<string> => {

@@ -91,7 +91,10 @@ const mockApi = async (
         gameId: '52',
         currency: 'USD',
         automaticDelivery: true,
-        sourceImageUrls: ['/api/listings/listing-e2e/images/1', '/api/listings/listing-e2e/images/2'],
+        sourceImageUrls: item?.gameId === '8-ball-pool'
+          ? ['/api/game-posters/8-ball-pool']
+          : ['/api/listings/listing-e2e/images/1', '/api/listings/listing-e2e/images/2'],
+        fallbackPoster: item?.gameId === '8-ball-pool',
         ...(offerOptionsByGame[item?.gameId ?? ''] ?? emptyOfferOptions),
       });
     }
@@ -170,6 +173,11 @@ test('game selection, collection and all production routes remain usable', async
   await expect(page.getByText('Сбор запущен')).toBeVisible();
   expect(JSON.parse(api.syncRequests[0])).toEqual({ gameId: 'eldorado-166' });
 
+  await page.getByRole('button', { name: /Arknights/ }).first().click();
+  await page.getByRole('searchbox', { name: 'Найти игру' }).fill('Zenless');
+  await page.getByRole('menuitem', { name: 'Zenless Zone Zero' }).click();
+  await expect(page.getByRole('button', { name: /Zenless Zone Zero/ })).toBeVisible();
+
   const routes = [
     ['Маркетплейс', '/marketplace'],
     ['Топ аккаунтов', '/top-accounts'],
@@ -232,6 +240,28 @@ test('bulk Eldorado publication prepares and publishes every selected account', 
     expect(input.rulesAccepted).toBe(true);
     expect(String(input.accountLogin)).toMatch(/@gmail\.com$/);
   }
+});
+
+test('photo-less game shows the illustrative poster before publication', async ({ page }) => {
+  const item = {
+    id: 'item-poster', accountId: 'account-poster', listingId: 'listing-poster',
+    gameId: '8-ball-pool', title: '8 Ball Pool account',
+    url: 'https://funpay.com/lots/offer?id=123',
+    purchase: { marketplace: 'funpay', price: { amount: 100, currency: 'RUB' },
+      purchasedAt: new Date().toISOString(), orderRef: null, operator: 'e2e' },
+    resale: { marketplace: 'eldorado', recommendedPrice: { amount: 200, currency: 'RUB' },
+      manualPrice: null },
+    expectedProfit: { amount: 100, currency: 'RUB' }, scores: null,
+    status: 'purchased', updatedAt: new Date().toISOString(),
+  };
+  await mockApi(page, true, [item]);
+  await page.goto('/inventory');
+  await page.getByRole('button', { name: /Clash Royale/ }).click();
+  await page.getByRole('searchbox', { name: 'Найти игру' }).fill('8 Ball Pool');
+  await page.getByRole('menuitem', { name: '8 Ball Pool' }).click();
+  await page.getByRole('checkbox', { name: 'Выбрать все готовые аккаунты' }).check();
+  await page.getByRole('button', { name: 'Опубликовать на Eldorado' }).click();
+  await expect(page.getByText('Иллюстративный постер (не скриншот аккаунта)')).toBeVisible();
 });
 
 const requiredSelect = (id: string, name: string, valueId: string, valueName: string) => ({

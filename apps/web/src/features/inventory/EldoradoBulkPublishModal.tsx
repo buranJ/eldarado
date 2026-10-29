@@ -86,7 +86,7 @@ export function EldoradoBulkPublishModal({
           const preview = await api.eldoradoPreview(item.id);
           if (preview.sourceImageUrls.length === 0) {
             return {
-              item, preview, status: 'error', error: 'Нет сохранённых фотографий', url: null,
+              item, preview, status: 'error', error: 'Нет фото или постера', url: null,
               selection: initialOfferSelection(preview),
             };
           }
@@ -247,6 +247,8 @@ export function EldoradoBulkPublishModal({
           в поля доступа к аккаунту, не в описание или комментарии. Замените их настоящими
           напрямую в Eldorado в течение согласованных с поддержкой 24 часов. Публикация
           выполняется последовательно, по одному аккаунту.
+          Если исходный лот без фото, вместо скриншота уйдёт иллюстративный постер;
+          проверьте такие лоты перед публикацией.
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-[11.5px]">
@@ -284,7 +286,9 @@ export function EldoradoBulkPublishModal({
                       {entry.item.accountId} · {entry.item.title}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-ink-4">
-                      <span>{entry.preview?.sourceImageUrls.length ?? 0} фото</span>
+                      <span>{entry.preview?.fallbackPoster
+                        ? 'Иллюстративный постер (не скриншот аккаунта)'
+                        : `${entry.preview?.sourceImageUrls.length ?? 0} фото`}</span>
                       {entry.error ? (
                         <span
                           className="inline-flex min-w-0 items-center gap-1 truncate text-neg"
