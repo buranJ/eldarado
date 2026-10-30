@@ -66,7 +66,7 @@ test('sends selected region in the same shape as the Eldorado seller form', () =
     { title: 'Mobile Legends', description: 'Account', sellMinor: 1, currency: 'USD' },
     {
       priceUsd: 20,
-      hasOriginalEmail: true,
+      hasOriginalEmail: false,
       credentials: { accountLogin: 'temporary@gmail.com', accountPassword: 'temporary' },
     },
     [{ smallImage: 'small', largeImage: 'large', originalSizeImage: 'original' }],

@@ -57,7 +57,7 @@ export function EldoradoPublishModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priceUsd, setPriceUsd] = useState(() => toBase(salePrice, 'USD').amount.toFixed(2));
-  const [originalEmail, setOriginalEmail] = useState('yes');
+  const [originalEmail, setOriginalEmail] = useState('no');
   const [offerSelection, setOfferSelection] = useState<EldoradoOfferSelection>({
     tradeEnvironmentId: '',
     offerAttributes: {},
@@ -67,6 +67,7 @@ export function EldoradoPublishModal({
   const [replacementImageUrl, setReplacementImageUrl] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [temporaryCredentials] = useState(createTemporaryCredentials);
+  const [temporaryEmailCredentials] = useState(createTemporaryCredentials);
   const [accountLogin, setAccountLogin] = useState(temporaryCredentials.login);
   const [accountPassword, setAccountPassword] = useState(temporaryCredentials.password);
 
@@ -79,6 +80,7 @@ export function EldoradoPublishModal({
         setPreview(value);
         setTitle(value.title);
         setDescription(value.description);
+        setOriginalEmail(value.hasOriginalEmail ? 'yes' : 'no');
         setOfferSelection(initialOfferSelection(value));
       })
       .catch((reason) => {
@@ -137,6 +139,11 @@ export function EldoradoPublishModal({
         ...imageInput,
         accountLogin,
         accountPassword,
+        ...(originalEmail === 'yes' ? {
+          emailProviderUrl: 'https://mail.google.com/',
+          emailLogin: temporaryEmailCredentials.login,
+          emailPassword: temporaryEmailCredentials.password,
+        } : {}),
         tradeEnvironmentId: offerSelection.tradeEnvironmentId || null,
         offerAttributes: offerSelection.offerAttributes,
         numericAttributes: offerSelection.numericAttributes,
@@ -219,6 +226,8 @@ export function EldoradoPublishModal({
               доступа к аккаунту на Eldorado, не в описание или комментарии. Замените их
               настоящими напрямую в Eldorado в течение согласованных с поддержкой 24 часов.
               Настоящие пароли в GameStock не вводите.
+              Если передаётся оригинальная почта, для неё создаются отдельные временные
+              реквизиты. Замените их настоящими в Eldorado до продажи.
             </div>
 
             <div className="grid grid-cols-[1fr_150px] gap-3">
@@ -264,6 +273,10 @@ export function EldoradoPublishModal({
                     { value: 'no', label: 'Нет' },
                   ]}
                 />
+                <p className="text-[10.5px] leading-relaxed text-ink-3">
+                  Выбирайте «Да», только если передадите покупателю оригинальную почту.
+                  Если выбрали «Нет», уберите обещание почты из заголовка и описания.
+                </p>
               </FormField>
               <FormField label={`${preview?.fallbackPoster && !image ? 'Иллюстративный постер' : 'Фото аккаунта'} (${previewImageUrls.length})`}>
                 {previewImageUrls[activeImageIndex] ? (

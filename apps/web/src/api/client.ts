@@ -118,6 +118,7 @@ export interface EldoradoPublishPreview {
   gameId: string;
   currency: 'USD';
   automaticDelivery: true;
+  hasOriginalEmail: boolean;
   sourceImageUrls: string[];
   fallbackPoster: boolean;
   requiredAttributes: Array<{

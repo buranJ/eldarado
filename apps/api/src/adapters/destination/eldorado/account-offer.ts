@@ -117,6 +117,22 @@ const emailDetails = (credentials: EldoradoAccountCredentials) => {
     : null;
 };
 
+/** Eldorado requires a complete mailbox delivery block when original email is offered. */
+export const validateOriginalEmailDetails = (
+  hasOriginalEmail: boolean,
+  credentials: EldoradoAccountCredentials,
+): string | null => {
+  const fields = [credentials.emailProviderUrl, credentials.emailLogin, credentials.emailPassword];
+  const anyEmailField = fields.some((value) => Boolean(value?.trim()));
+  if (hasOriginalEmail && fields.some((value) => !value?.trim())) {
+    return 'Для лота с оригинальной почтой укажите адрес почтового сервиса, логин и пароль почты';
+  }
+  if (!hasOriginalEmail && anyEmailField) {
+    return 'Реквизиты почты нельзя отправить, если оригинальная почта не включена';
+  }
+  return null;
+};
+
 const mfaDetails = (credentials: EldoradoAccountCredentials) => {
   const mfaLogin = credentials.mfaLogin?.trim() ?? '';
   const mfaPassword = credentials.mfaPassword?.trim() ?? '';
@@ -132,6 +148,8 @@ export const buildAccountOfferPayload = (
   tradeEnvironmentId: string | null = null,
   offerAttributes: SelectedOfferAttribute[] = [],
 ): EldoradoAccountOfferPayload => {
+  const emailError = validateOriginalEmailDetails(input.hasOriginalEmail, input.credentials);
+  if (emailError) throw new Error(emailError);
   const [mainOfferImage, ...offerImages] = images;
   return {
     details: {

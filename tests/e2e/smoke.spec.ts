@@ -91,6 +91,7 @@ const mockApi = async (
         gameId: '52',
         currency: 'USD',
         automaticDelivery: true,
+        hasOriginalEmail: itemId === 'item-two',
         sourceImageUrls: item?.gameId === '8-ball-pool'
           ? ['/api/game-posters/8-ball-pool']
           : ['/api/listings/listing-e2e/images/1', '/api/listings/listing-e2e/images/2'],
@@ -234,11 +235,20 @@ test('bulk Eldorado publication prepares and publishes every selected account', 
 
   await expect(page.getByText('Опубликовано:')).toBeVisible({ timeout: 15_000 });
   expect(api.publishRequests).toHaveLength(2);
-  for (const raw of api.publishRequests) {
+  for (const [index, raw] of api.publishRequests.entries()) {
     const input = JSON.parse(raw) as Record<string, unknown>;
     expect(input.termsAccepted).toBe(true);
     expect(input.rulesAccepted).toBe(true);
     expect(String(input.accountLogin)).toMatch(/@gmail\.com$/);
+    expect(input.hasOriginalEmail).toBe(index === 1);
+    if (index === 1) {
+      expect(input.emailProviderUrl).toBe('https://mail.google.com/');
+      expect(String(input.emailLogin)).toMatch(/@gmail\.com$/);
+      expect(String(input.emailPassword).length).toBeGreaterThan(20);
+      expect(input.emailLogin).not.toBe(input.accountLogin);
+    } else {
+      expect(input.emailLogin).toBeUndefined();
+    }
   }
 });
 

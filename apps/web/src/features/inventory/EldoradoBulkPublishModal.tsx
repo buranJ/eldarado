@@ -155,14 +155,22 @@ export function EldoradoBulkPublishModal({
       updateEntry(entry.item.id, { status: 'publishing', error: null });
       const salePrice = entry.item.resale.manualPrice ?? entry.item.resale.recommendedPrice;
       const credentials = createTemporaryCredentials();
+      const emailCredentials = entry.preview.hasOriginalEmail
+        ? createTemporaryCredentials()
+        : null;
       try {
         const result = await api.publishToEldorado(entry.item.id, {
           title: entry.preview.title,
           description: entry.preview.description,
           priceUsd: toBase(salePrice, 'USD').amount,
-          hasOriginalEmail: true,
+          hasOriginalEmail: entry.preview.hasOriginalEmail,
           accountLogin: credentials.login,
           accountPassword: credentials.password,
+          ...(emailCredentials ? {
+            emailProviderUrl: 'https://mail.google.com/',
+            emailLogin: emailCredentials.login,
+            emailPassword: emailCredentials.password,
+          } : {}),
           tradeEnvironmentId: entry.selection.tradeEnvironmentId || null,
           offerAttributes: entry.selection.offerAttributes,
           numericAttributes: entry.selection.numericAttributes,
@@ -247,6 +255,8 @@ export function EldoradoBulkPublishModal({
           в поля доступа к аккаунту, не в описание или комментарии. Замените их настоящими
           напрямую в Eldorado в течение согласованных с поддержкой 24 часов. Публикация
           выполняется последовательно, по одному аккаунту.
+          Если исходное объявление обещает оригинальную почту, для её полей будут созданы
+          отдельные временные реквизиты. Замените и их настоящими в Eldorado до продажи.
           Если исходный лот без фото, вместо скриншота уйдёт иллюстративный постер;
           проверьте такие лоты перед публикацией.
         </div>

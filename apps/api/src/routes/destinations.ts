@@ -7,6 +7,7 @@ import {
   buildAccountOfferPayload,
   ELDORADO_ACCOUNT_GAMES,
   eldoradoOfferUrl,
+  validateOriginalEmailDetails,
 } from '../adapters/destination/eldorado/account-offer.js';
 import type { EldoradoOfferImage } from '../adapters/destination/eldorado/account-offer.js';
 import {
@@ -178,7 +179,7 @@ const GAME_LABELS: Record<string, string> = {
 const internalGameId = (eldoradoGameId: string): string =>
   INTERNAL_GAME_IDS[eldoradoGameId] ?? `eldorado-${eldoradoGameId}`;
 
-const draftFor = (item: InventoryItem) => {
+const attributesFor = (item: InventoryItem) => {
   const parsed = ExtractionSchema.safeParse(item.listing.analysis?.extracted);
   const sourceAttributes =
     typeof item.listing.gameData === 'object' && item.listing.gameData !== null
@@ -188,6 +189,15 @@ const draftFor = (item: InventoryItem) => {
     ...sourceAttributes,
     ...(parsed.success ? toAttributeMap(parsed.data) : {}),
   };
+  return attributes;
+};
+
+const draftFor = (item: InventoryItem) => {
+  const attributes = attributesFor(item);
+  const sourceAttributes =
+    typeof item.listing.gameData === 'object' && item.listing.gameData !== null
+      ? (item.listing.gameData as Record<string, number | boolean | string | null>)
+      : {};
   const storedTitle =
     typeof sourceAttributes.titleEn === 'string' ? sourceAttributes.titleEn.trim() : '';
   const sellerSummary = storedTitle || translateGameTitle(item.gameId, item.listing.sellerTitle);
@@ -510,6 +520,7 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
         gameId: game.gameId,
         currency: 'USD',
         automaticDelivery: true,
+        hasOriginalEmail: attributesFor(item).originalEmail === true,
         sourceImageUrls: fallbackPoster
           ? [fallbackPoster]
           : item.listing.images.map(
@@ -533,6 +544,8 @@ export const registerDestinationRoutes = (app: FastifyInstance): void => {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const input = publishSchema.parse(request.body ?? {});
+      const emailError = validateOriginalEmailDetails(input.hasOriginalEmail, input);
+      if (emailError) return reply.code(422).send({ error: emailError });
       const item = await loadInventoryItem(id, request.user!.id);
       if (!item) return reply.code(404).send({ error: 'Позиция не найдена' });
       if (!['purchased', 'ready_to_list', 'preparing'].includes(item.status)) {

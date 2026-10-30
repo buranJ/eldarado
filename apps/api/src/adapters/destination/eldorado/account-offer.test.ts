@@ -11,7 +11,7 @@ test('builds the current Eldorado account offer payload without legacy secrets',
       title: ' Clash Royale test account ',
       description: 'Accurate test description',
       priceUsd: 29.5,
-      hasOriginalEmail: true,
+      hasOriginalEmail: false,
       credentials: {
         accountLogin: ' seller-login ',
         accountPassword: 'secret-password',
@@ -30,23 +30,26 @@ test('builds the current Eldorado account offer payload without legacy secrets',
   assert.equal(payload.details.mainOfferImage.originalSizeImage, 'original.jpg');
   assert.deepEqual(payload.details.offerImages, []);
   assert.deepEqual(payload.details.pricing.pricePerUnit, { amount: 29.5, currency: 'USD' });
+  assert.equal(payload.details.hasOriginalEmail, false);
   assert.equal('accountSecretDetails' in payload, false);
   assert.equal(payload.accountDeliveryDetails[0].accountDetails.accountLogin, 'seller-login');
   assert.equal(payload.accountDeliveryDetails[0].emailDetails, null);
   assert.equal(payload.accountDeliveryDetails[0].mfaDetails, null);
 });
 
-test('normalizes partially supplied optional delivery groups like Eldorado seller UI', () => {
+test('includes complete original email details when original email is offered', () => {
   const payload = buildAccountOfferPayload(
     '52',
     { title: 'Draft', description: 'Draft', sellMinor: 1, currency: 'USD' },
     {
       priceUsd: 10,
-      hasOriginalEmail: false,
+      hasOriginalEmail: true,
       credentials: {
         accountLogin: 'login',
         accountPassword: 'password',
         emailProviderUrl: ' https://mail.google.com ',
+        emailLogin: ' mailbox@gmail.com ',
+        emailPassword: 'mailbox-secret',
         mfaLogin: ' recovery-code ',
       },
     },
@@ -55,13 +58,32 @@ test('normalizes partially supplied optional delivery groups like Eldorado selle
 
   assert.deepEqual(payload.accountDeliveryDetails[0].emailDetails, {
     emailProviderUrl: 'https://mail.google.com',
-    emailLogin: '',
-    emailPassword: '',
+    emailLogin: 'mailbox@gmail.com',
+    emailPassword: 'mailbox-secret',
   });
   assert.deepEqual(payload.accountDeliveryDetails[0].mfaDetails, {
     mfaLogin: 'recovery-code',
     mfaPassword: '',
   });
+});
+
+test('rejects original email without mailbox credentials before Eldorado receives the offer', () => {
+  const draft = { title: 'Draft', description: 'Draft', sellMinor: 1, currency: 'USD' };
+  const images = [{ smallImage: 's', largeImage: 'l', originalSizeImage: 'o' }] as [
+    { smallImage: string; largeImage: string; originalSizeImage: string },
+  ];
+  assert.throws(() => buildAccountOfferPayload('52', draft, {
+    priceUsd: 10,
+    hasOriginalEmail: true,
+    credentials: { accountLogin: 'login', accountPassword: 'password' },
+  }, images), /оригинальной почтой/);
+  assert.throws(() => buildAccountOfferPayload('52', draft, {
+    priceUsd: 10,
+    hasOriginalEmail: false,
+    credentials: {
+      accountLogin: 'login', accountPassword: 'password', emailLogin: 'unused@gmail.com',
+    },
+  }, images), /Реквизиты почты нельзя отправить/);
 });
 
 test('maps both additional games to Eldorado account categories', () => {
