@@ -56,6 +56,19 @@ about six days, set `MONITOR_TLS_EXPIRY_DAYS=2` and verify automatic renewal
 with `certbot renew --dry-run`. Replace the IP-specific site and origin with
 the domain configuration after changing DNS.
 
+### gameteam.biz
+
+GoDaddy DNS points `@` to `131.222.133.247` with an A record; `www` is a
+CNAME to `gameteam.biz`. The active host configuration is
+`docker/gameteam.nginx.conf`: it serves the apex domain and redirects both
+`www` and the server IP to it. Certbot manages a certificate for
+`gameteam.biz` and `www.gameteam.biz`; the existing IP certificate remains
+available for the HTTPS redirect. On this server, set
+`APP_ORIGIN=https://gameteam.biz`, `MONITOR_TLS_HOST=gameteam.biz`, and
+`MONITOR_TLS_EXPIRY_DAYS=14`, then recreate the API and monitor containers.
+Check the configuration with `nginx -t`, reload Nginx, and verify both
+certificates with `certbot renew --dry-run`.
+
 ## Backup
 
 The `backup` service runs once immediately after startup and then every
