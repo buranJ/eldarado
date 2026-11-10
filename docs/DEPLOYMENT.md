@@ -45,6 +45,17 @@ location / {
 
 Validate with `nginx -t` before reloading Nginx.
 
+### Temporary IP address access
+
+When the domain still points to another server, use `docker/host.nginx.conf`
+as the host Nginx site after replacing its IP address. Issue a Let's Encrypt
+short-lived IP certificate with Certbot's webroot authenticator and install
+`docker/certbot-reload-nginx.sh` as a deploy hook. Set `APP_ORIGIN` to the
+matching `https://IP_ADDRESS` URL. Because an IP certificate is valid for only
+about six days, set `MONITOR_TLS_EXPIRY_DAYS=2` and verify automatic renewal
+with `certbot renew --dry-run`. Replace the IP-specific site and origin with
+the domain configuration after changing DNS.
+
 ## Backup
 
 The `backup` service runs once immediately after startup and then every
