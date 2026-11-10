@@ -23,6 +23,9 @@ import { reportOperationalError } from './lib/error-monitor.js';
 import { Sentry } from './instrumentation.js';
 import { mailConfigured } from './lib/mailer.js';
 import { registerOperationsRoutes } from './routes/operations.js';
+import { assertCredentialEncryptionReady } from './lib/credentials.js';
+
+assertCredentialEncryptionReady();
 
 const app = Fastify({
   logger: { transport: { target: 'pino-pretty' } },

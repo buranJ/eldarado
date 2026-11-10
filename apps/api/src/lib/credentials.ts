@@ -9,8 +9,15 @@ const encryptionKey = (): Buffer => {
     throw new Error('Не задан CREDENTIAL_ENCRYPTION_KEY на сервере');
   }
   const key = Buffer.from(env.credentialEncryptionKey, 'base64');
-  if (key.length !== 32) throw new Error('CREDENTIAL_ENCRYPTION_KEY должен содержать 32 байта');
+  if (key.length !== 32 || key.toString('base64') !== env.credentialEncryptionKey) {
+    throw new Error('CREDENTIAL_ENCRYPTION_KEY должен содержать 32 байта в Base64');
+  }
   return key;
+};
+
+/** Fail during startup instead of waiting for the first integration save. */
+export const assertCredentialEncryptionReady = (): void => {
+  if (env.production) encryptionKey();
 };
 
 const encrypt = (value: unknown) => {

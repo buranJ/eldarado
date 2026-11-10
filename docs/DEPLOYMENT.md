@@ -10,6 +10,10 @@ Copy `.env.production.example` to `.env.production` and replace every required
 value. `POSTGRES_PASSWORD` and the password embedded in `DATABASE_URL` must be
 identical. Keep the existing `CREDENTIAL_ENCRYPTION_KEY` when migrating a
 database that already contains encrypted integration credentials.
+For a fresh database, generate the encryption key with
+`openssl rand -base64 32` and place the resulting single-line value in
+`CREDENTIAL_ENCRYPTION_KEY`. Keep this value in a secure backup: changing it
+after integration credentials have been saved makes them unreadable.
 
 ## Start
 
